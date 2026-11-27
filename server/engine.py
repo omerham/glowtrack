@@ -49,6 +49,11 @@ PULSE_LEAD = 0.08
 # update (about 0.15 s later), so on average it should show where the colour will be by then.
 LAMP_LEAD = 0.08
 
+# Some colour crossings (e.g. yellow to blue) are deliberately quick. On the lamps, which show
+# colours in steps, a fast edge looks like a pop. No zone is allowed to change faster than this
+# (levels of 255 per second): the crossing still happens, just without the jolt.
+SLEW_PER_SEC = 200.0
+
 PREVIEW_MODES = ("smooth", "low", "off")
 # Full dashboard refresh rate. In "smooth" the lamp preview gets its own tiny
 # colour-only frames instead, so the big refresh can be rare.
@@ -190,6 +195,8 @@ class AppState:
         self.last_broadcast = 0.0
         self.attention = False                 # "Claude needs you" signal on the right lamp
         self.attention_turned_on_lamps = False
+        self._slew_prev = None         # last frame after the speed limit (moving modes only)
+        self._slew_t = 0.0
         self.phase = 0.0               # where the moving modes are in the colour loop
         self.phase_time = time.time()
 
@@ -569,6 +576,23 @@ class AppState:
             c_right = c_left
         return [c_left] * 7, [c_right] * 7
 
+    def _limit_slew(self, frame, now):
+        """Moving modes: keeps every zone's colour from changing faster than SLEW_PER_SEC."""
+        prev, t_prev = self._slew_prev, self._slew_t
+        self._slew_t = now
+        if prev is None or now - t_prev > 0.5:
+            self._slew_prev = frame
+            return frame
+        step = SLEW_PER_SEC * (now - t_prev)
+
+        def lim(new, old):
+            return tuple(int(round(o + max(-step, min(step, n - o)))) for n, o in zip(new, old))
+
+        out = ([lim(n, o) for n, o in zip(frame[0], prev[0])],
+               [lim(n, o) for n, o in zip(frame[1], prev[1])])
+        self._slew_prev = out
+        return out
+
     def engine_loop(self):
         """The ONLY place that sends colours to the lamps. Handles flowing
         modes, fades between songs/modes, beat pulse and holding still."""
@@ -616,6 +640,11 @@ class AppState:
 
                 # Dynamic energy changes are glided at full frame rate too, so
                 # Solid mode doesn't step its brightness once a second
+                if animating:
+                    frame = self._limit_slew(frame, now)
+                else:
+                    self._slew_prev = None          # still modes jump straight to their colour
+
                 if animating or fading or pulsing or self._energy_moving():
                     self.govee.send_frame(frame[0], frame[1], persistent=False)
                     self.out_frame = frame

@@ -5,6 +5,8 @@ Apple Music, YouTube Music or any other site/app, Tidal, Amazon Music, Deezer an
 Colours come from the album art. Everything stays on your Wi-Fi, and it
 works with a free Spotify account.
 
+![The Glowtrack dashboard](docs/screenshot.png)
+
 > Unofficial hobby project. Not affiliated with or endorsed by Govee or Spotify.
 
 ## Requirements

@@ -606,6 +606,34 @@ class SmoothMotionTest(unittest.TestCase):
         self.assertLess(sum(lag) / len(lag), 4.0)           # (was ~4.9 before)
 
 
+class SlewLimitTest(unittest.TestCase):
+    def test_fast_crossings_are_slowed_not_skipped(self):
+        S = engine.AppState()
+        S.save_config = lambda: None
+        dark, bright = [(10, 10, 10)] * 7, [(250, 240, 230)] * 7
+        t = 100.0
+        out = S._limit_slew((dark, dark), t)                      # first frame passes straight through
+        self.assertEqual(out[0][0], (10, 10, 10))
+        prev, steps = out[0][0], []
+        for _ in range(40):                                       # target jumps to bright and stays
+            t += 1 / 15
+            out = S._limit_slew((bright, bright), t)
+            steps.append(max(abs(a - b) for a, b in zip(out[0][0], prev)))
+            prev = out[0][0]
+        self.assertLessEqual(max(steps), engine.SLEW_PER_SEC / 15 + 1)   # never faster than the limit
+        self.assertEqual(prev, (250, 240, 230))                          # but it does get there (~1.2 s)
+        self.assertGreater(sum(1 for s_ in steps if s_ > 0), 10)         # over many frames, not one jump
+
+    def test_slow_motion_is_untouched_and_gaps_reset(self):
+        S = engine.AppState()
+        S.save_config = lambda: None
+        a, b = [(100, 100, 100)] * 7, [(103, 99, 100)] * 7
+        S._limit_slew((a, a), 10.0)
+        self.assertEqual(S._limit_slew((b, b), 10.07)[0][0], (103, 99, 100))
+        far = [(250, 0, 0)] * 7
+        self.assertEqual(S._limit_slew((far, far), 20.0)[0][0], (250, 0, 0))   # after a long pause: no lag
+
+
 class FakeRequest:
     """Just enough of an HTTP handler to test the access checks."""
     def __init__(self, handler_cls, client_ip="192.168.1.50", headers=None):
