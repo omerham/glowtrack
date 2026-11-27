@@ -830,6 +830,7 @@ class AppState:
             "available_ips": g.all_ips,
             "left_ip": g.left_ip,
             "right_ip": g.right_ip,
+            "lamp_status": {ip: {k: v for k, v in s.items() if k != "t"} for ip, s in self.govee.status.items()},
             "lamp_online": {ip: g.is_online(ip) for ip in g.all_ips},
             "identifying_ip": self.identifying_ip,
             "online_count": sum(1 for ip in sides if g.is_online(ip)),

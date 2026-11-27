@@ -32,11 +32,18 @@ for t in ("a", "b", "c", "d"):
     SHOTS.append((f"{NAMES[t]}-phone", f"theme={t}", PHONE, 640))
 
 
-def chrome(args, url):
-    profile = tempfile.mkdtemp()
-    cmd = [CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=2",
-           "--virtual-time-budget=9000", f"--user-data-dir={profile}"] + args + [url]
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+def chrome(args, url, tries=3):
+    """Runs Chrome once. Headless Chrome now and then hangs for no reason, so a run that takes too long is
+    stopped (with its helper processes) and tried again."""
+    for attempt in range(tries):
+        profile = tempfile.mkdtemp()
+        cmd = [CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=2",
+               "--virtual-time-budget=9000", f"--user-data-dir={profile}"] + args + [url]
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        except subprocess.TimeoutExpired:
+            subprocess.run(["pkill", "-f", profile], capture_output=True)
+    sys.exit("Chrome kept hanging; try again")
 
 
 def take(base, name, query, window, width):

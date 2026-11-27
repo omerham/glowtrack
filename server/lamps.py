@@ -39,6 +39,9 @@ class GoveeController:
 
         # Lamp reply tracking (scan + devStatus answers arrive on port 4002)
         self.last_seen = {}            # ip -> time of last reply
+        self.status = {}               # ip -> what the lamp last said about itself: on/off, brightness, colour
+        self._heal_tries = {}          # ip -> brightness corrections sent in a row
+        self._heal_gave_up = {}        # ip -> when we stopped correcting it
         self.listener_ok = False       # False if port 4002 could not be opened
         self.listener_error = ""
         self.ip_lock = threading.Lock()
@@ -76,6 +79,9 @@ class GoveeController:
                     resp = json.loads(data.decode("utf-8"))
                     data_ = resp.get("msg", {}).get("data", {})
                     reported_ip = data_.get("ip") or src_ip
+                    if resp.get("msg", {}).get("cmd") == "devStatus" and "brightness" in data_:
+                        self.status[src_ip] = {"on": data_.get("onOff"), "brightness": data_.get("brightness"),
+                                               "color": data_.get("color"), "kelvin": data_.get("colorTemInKelvin"), "t": time.time()}
                     if data_.get("sku") and _is_local_ip(reported_ip):
                         self.skus[reported_ip] = str(data_["sku"])
                 except Exception:
@@ -131,7 +137,46 @@ class GoveeController:
                     d.ping()
                 except Exception:
                     pass
-            time.sleep(15.0)
+            time.sleep(1.5)                      # let the lamps answer, then check what they said
+            try:
+                self.heal_brightness()
+            except Exception as e:
+                print(f"[!] Brightness check failed: {e}")
+            time.sleep(13.5)
+
+    BRIGHTNESS_TOLERANCE = 3       # a lamp within this many percent of the wanted level counts as right
+    BRIGHTNESS_TRIES = 8           # corrections tried in a row (one every 15 s) before giving up for a while
+    BRIGHTNESS_BURST = 3           # copies of each correction: UDP drops packets, and a lamp busy with colour frames misses some
+
+    def heal_brightness(self, now=None):
+        """Makes every lamp match the brightness Glowtrack is set to. The brightness command is only sent when the
+        slider moves (and once at start), so a lamp that missed it, was offline at that moment or was changed from
+        the Govee app stays at its own level while the other lamp is right. Each lamp reports its brightness in its
+        status reply: when it differs, send the command to that lamp alone."""
+        now = time.time() if now is None else now
+        want = max(1, min(100, int(self.brightness_pct)))
+        for ip in list(self.ips):
+            st = self.status.get(ip)
+            if not st or now - st["t"] > 30 or not st.get("on"):
+                continue                         # no fresh report, or the lamp is off: nothing to compare
+            try:
+                have = int(st["brightness"])
+            except (TypeError, ValueError):
+                continue
+            if abs(have - want) <= self.BRIGHTNESS_TOLERANCE:
+                self._heal_tries[ip] = 0
+                continue
+            tries = self._heal_tries.get(ip, 0)
+            if tries >= self.BRIGHTNESS_TRIES:
+                if now - self._heal_gave_up.get(ip, now) > 300:      # try again every five minutes
+                    self._heal_tries[ip] = 0
+                self._heal_gave_up.setdefault(ip, now)
+                continue
+            self._heal_tries[ip] = tries + 1
+            print(f"[*] Lamp {ip} was at {have}% brightness, wanted {want}%: correcting")
+            for _ in range(self.BRIGHTNESS_BURST):
+                self.send_cmd({"msg": {"cmd": "brightness", "data": {"value": want}}}, ips=[ip])
+                time.sleep(0.12)
 
     def sync_ordered_ips(self):
         new_ips = []

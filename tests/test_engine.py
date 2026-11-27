@@ -938,6 +938,51 @@ class OtherDevicesTest(unittest.TestCase):
         self.assertEqual((again.name, again.side), ("Beam", "right"))
 
 
+class BrightnessHealTest(unittest.TestCase):
+    def _lamps(self, want=100):
+        import lamps
+        c = lamps.GoveeController(["10.0.0.1", "10.0.0.2"])
+        c.brightness_pct = want
+        sent = []
+        c.send_cmd = lambda msg, ips=None: sent.append((msg["msg"]["cmd"], msg["msg"]["data"].get("value"), ips))
+        return c, sent
+
+    def _report(self, c, ip, brightness, on=1, t=None):
+        c.status[ip] = {"on": on, "brightness": brightness, "color": None, "kelvin": 0, "t": time.time() if t is None else t}
+
+    def test_a_lamp_at_the_wrong_brightness_is_corrected_alone(self):
+        c, sent = self._lamps(100)
+        self._report(c, "10.0.0.1", 5)              # the left lamp missed the command
+        self._report(c, "10.0.0.2", 100)
+        c.heal_brightness()
+        self.assertEqual(sent, [("brightness", 100, ["10.0.0.1"])] * c.BRIGHTNESS_BURST)     # only that lamp, a few copies
+
+    def test_lamps_that_match_are_left_alone(self):
+        c, sent = self._lamps(80)
+        self._report(c, "10.0.0.1", 80)
+        self._report(c, "10.0.0.2", 82)             # within the tolerance
+        c.heal_brightness()
+        self.assertEqual(sent, [])
+
+    def test_off_or_silent_lamps_are_not_touched(self):
+        c, sent = self._lamps(100)
+        self._report(c, "10.0.0.1", 5, on=0)
+        self._report(c, "10.0.0.2", 5, t=time.time() - 120)      # report too old
+        c.heal_brightness()
+        self.assertEqual(sent, [])
+
+    def test_it_gives_up_instead_of_fighting_a_lamp(self):
+        c, sent = self._lamps(100)
+        now = time.time()
+        for i in range(10):
+            self._report(c, "10.0.0.1", 5, t=now + i)
+            c.heal_brightness(now=now + i)
+        self.assertEqual(len(sent), c.BRIGHTNESS_TRIES * c.BRIGHTNESS_BURST)   # a limited number of tries, then it stops
+        self._report(c, "10.0.0.1", 100, t=now + 20)
+        c.heal_brightness(now=now + 20)
+        self.assertEqual(c._heal_tries["10.0.0.1"], 0)           # and starts fresh once the lamp is right
+
+
 class ReleaseLampsTest(unittest.TestCase):
     def _controller(self, powered=True):
         import lamps

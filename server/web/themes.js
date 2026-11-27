@@ -80,10 +80,11 @@
         '<div class="frame"><div></div></div>' +
         '<div class="credit"><div class="k">Now playing &nbsp;/&nbsp; <span data-b="src"></span></div><h3 data-b="title"></h3><p data-b="artistalbum"></p></div>' +
         '<div class="modes">' + MODES.map(pic).join('') + '</div>' +
-        '<div class="dock"><div class="tp"><button data-step="-1" aria-label="Previous">' + ICON.prev + '</button><button data-play aria-label="Play or pause"><span data-b="playicon"></span></button><button data-step="1" aria-label="Next">' + ICON.next + '</button></div>' +
-        '<div class="tl2"><span data-b="pos"></span><div class="tk" data-seek><i></i></div><span data-b="dur"></span></div>' +
-        '<label style="display:flex;align-items:center;gap:10px">Brightness <input type="range" id="dBright" min="5" max="100" data-range aria-label="Brightness"></label>' +
-        '<button class="t" data-toggle="pulse">Pulse</button><button class="t" data-toggle="energy">Energy</button><button class="t" data-power>Power</button><button class="t" data-open="settings">Settings</button><button class="t" data-open="full">Full screen</button></div></div>';
+        '<div class="dock"><div class="r1"><div class="tp"><button data-step="-1" aria-label="Previous">' + ICON.prev + '</button><button data-play aria-label="Play or pause"><span data-b="playicon"></span></button><button data-step="1" aria-label="Next">' + ICON.next + '</button></div>' +
+        '<div class="tl2"><span data-b="pos"></span><div class="tk" data-seek><i></i></div><span data-b="dur"></span></div></div>' +
+        '<div class="r2"><label class="br">Brightness <input type="range" id="dBright" min="5" max="100" data-range aria-label="Brightness"></label>' +
+        '<div class="tg"><button class="t sw" data-toggle="pulse">Pulse</button><button class="t sw" data-toggle="energy">Energy</button><button class="t sw" data-power>Power</button></div>' +
+        '<div class="nv"><button class="t" data-open="settings">Settings</button><button class="t" data-open="full">Full screen</button></div></div></div></div>';
     }
   };
 
@@ -352,6 +353,8 @@
     if (T.sig.pal !== palSig) {
       T.sig.pal = palSig;
       pal.forEach(function (c, i) { var r = rgb(c); root.style.setProperty('--p' + i, c); root.style.setProperty('--t' + i, bestText(r)); });
+      var yl = Math.max(wl(rgb(pal[0])), wl(rgb(pal[1])) * 0.6, wl(rgb(pal[3])) * 0.6, 0.2);   // how light the colours behind the title can get
+      root.style.setProperty('--scrim', Math.max(0.3, Math.min(0.86, 1 - 0.19 / yl)).toFixed(2));    // darken that corner just enough for cream text to read (about 4.5:1)
       if (d === 'c') root.style.background = pal[0]; else root.style.background = '';
       root.style.setProperty('--cov', 'radial-gradient(circle at 24% 22%, ' + pal[0] + ' 0 34%, transparent 62%), radial-gradient(circle at 78% 78%, ' + pal[1] + ' 0 30%, transparent 60%), linear-gradient(135deg, ' + pal[2] + ', ' + pal[3] + ')');
       T.sig.art = null;
@@ -491,7 +494,16 @@
     } else {
       html = '<div class="l cur msg">' + ({ loading: 'Loading lyrics...', instrumental: 'Instrumental', error: 'Could not load lyrics', none: 'No lyrics found for this song' }[st] || 'No lyrics') + '</div>';
     }
-    holders.forEach(function (h) { h.innerHTML = html; });
+    holders.forEach(function (h) {
+      h.innerHTML = html;
+      // Long lines wrap onto several rows, so fewer of them fit: show only as many as the column holds
+      // (dropping from the end, so the line being sung and the ones before it always stay visible)
+      while (h.children.length > 2) {
+        var hb = h.getBoundingClientRect(), a = h.firstElementChild.getBoundingClientRect(), z = h.lastElementChild.getBoundingClientRect();
+        if (hb.height < 40 || (z.bottom <= hb.bottom + 1 && a.top >= hb.top - 1)) break;
+        h.removeChild(h.lastElementChild);
+      }
+    });
   }
   function esc(t) { return String(t).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
 
