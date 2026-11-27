@@ -230,7 +230,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
         menu.addItem(item("Turn Lamps Off", #selector(togglePower), tag: .power))
         menu.addItem(item("Solid", #selector(setPreset(_:)), tag: .solid))
-        menu.addItem(item("Ambient Wave", #selector(setPreset(_:)), tag: .wave))
+        menu.addItem(item("Colour Fade", #selector(setPreset(_:)), tag: .wave))
         menu.addItem(item("Two-Lamp Split", #selector(setPreset(_:)), tag: .duo))
         menu.addItem(item("7-Zone Fade", #selector(setPreset(_:)), tag: .seg))
 

@@ -50,7 +50,7 @@ The first launch asks for permission to control Spotify and to use the local net
 | Mode | Motion |
 |---|---|
 | Solid | still – one album colour on both lamps |
-| Ambient Wave | moving – both lamps flow through the album colours together |
+| Colour Fade | moving – both lamps flow through the album colours together |
 | Two-Lamp Split | still – a different album colour on each lamp |
 | 7-Zone Fade | moving – album colours flow up the 7 zones of each lamp |
 

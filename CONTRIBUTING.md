@@ -20,6 +20,8 @@ are read fresh on each page load. The menu-bar app is in `mac/` (`mac/build.sh`)
 - Added new Tailwind classes? Rebuild the styles: `/usr/bin/python3 tools/build_tailwind.py`.
 - Keep the server dependency-free apart from Pillow.
 - Anything that sends to the lamps goes through `engine.py` only.
+- Changed one of the designs? Run `tools/layout-lint.js` in the page (see its header) and go through
+  `docs/design-review-prompt.md` before sending it.
 - Don't commit personal data (lamp IPs, tokens, config files).
 
 ## Reporting problems

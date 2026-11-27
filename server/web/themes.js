@@ -8,7 +8,7 @@
   var THEMES = ['classic', 'a', 'b', 'c', 'd'];
   var MODES = [
     { id: 'solid', a: 'Solid', b: 'Still', long: 'Solid' },
-    { id: 'wave', a: 'Wave', b: 'Moving', long: 'Ambient Wave' },
+    { id: 'wave', a: 'Fade', b: 'Moving', long: 'Colour Fade' },
     { id: 'split', a: 'Split', b: 'Still', long: 'Two-Lamp Split' },
     { id: 'zones', a: '7-Zone', b: 'Moving', long: '7-Zone Fade' }
   ];
@@ -18,7 +18,7 @@
     ['Motion', [['sl', 'cycle', 'Colour cycle', 3, 20], ['sl', 'fade', 'Song fade', 1, 8], ['seg', 'fsm', 'Full-screen motion', [['0', 'Off'], ['1', 'Slow'], ['3', 'Medium'], ['5', 'Fast']]]]],
     ['Beat pulse', [['sl', 'depth', 'Pulse depth', 10, 90], ['tempo']]],
     ['Playback', [['sl', 'vol', 'Volume', 0, 100], ['tg', 'shuffle', 'Shuffle'], ['tg', 'repeat', 'Repeat']]],
-    ['Lamps', [['btns', 'lampbtns', [['swap', 'Swap left / right'], ['flip', 'Flip top / bottom'], ['rescan', 'Rescan'], ['blinkL', 'Blink left'], ['blinkR', 'Blink right']]], ['seg', 'preview', 'Lamp preview', [['smooth', 'Smooth'], ['low', 'Low power'], ['off', 'Off']]]]],
+    ['Lamps', [['btns', 'lampbtns', [['swap', 'Swap left / right'], ['flip', 'Flip top / bottom'], ['rescan', 'Rescan'], ['blinkL', 'Blink left'], ['blinkR', 'Blink right']]], ['seg', 'preview', 'Lamp preview', [['smooth', 'Smooth'], ['low', 'Low power'], ['off', 'Minimal']]]]],
     ['Other lights', [['form']]],
     ['Phone and tablet', [['link']]],
     ['Server', [['danger', 'Shut down']]]
@@ -30,6 +30,7 @@
     pause: '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 2h4v12H3zM9 2h4v12H9z" fill="currentColor"/></svg>'
   };
   function aopt() { return 1; }
+  var DBG = '<div class="dbg"><div class="bl b1"></div><div class="bl b2"></div><div class="bl b3"></div><div class="bl b4"></div><div class="vig"></div></div>';
   function transportA() { return '<button class="key" data-step="-1" aria-label="Previous">' + ICON.prev + '</button><button class="key" data-play aria-label="Play or pause"><span data-b="playicon"></span></button><button class="key" data-step="1" aria-label="Next">' + ICON.next + '</button>'; }
 
   function cellsA(side) { var h = '', i; for (i = 0; i < 7; i++) h += '<div class="cell" data-z="' + (i + 1) + '" style="--c:var(--' + side + i + ')"></div>'; return h; }
@@ -50,15 +51,17 @@
         '<div class="row" style="margin-top:14px;align-items:flex-start"><div class="bpm" style="flex:1">Tempo<b data-b="bpm"></b></div><div style="flex:1"><button class="sw" data-toggle="pulse"><span class="trk"></span>Pulse</button><button class="sw" data-toggle="energy"><span class="trk"></span>Energy</button></div></div></section></div>';
     },
     b: function () {
-      return '<div class="design B">' +
+      return '<div class="design B m">' +
         '<div class="top"><span>Glowtrack &nbsp;/&nbsp; <span data-b="src"></span></span><span class="tl"><button data-open="settings">Settings</button><button data-open="full">Full screen</button></span></div>' +
-        '<div class="tt dot" data-b="titleU"></div><div class="ar" data-b="artistU"></div>' +
-        '<div class="tm dot"><span data-b="pos"></span><small data-b="durlong"></small><span class="pn"><button data-play><span data-b="playword"></span></button><button data-step="1">Next</button></span></div><div class="pbar" data-seek><i></i></div>' +
+        '<div class="lcol"><div class="fl"><div class="tt dot" data-b="titleU"></div><div class="ar" data-b="artistU"></div></div>' +
+        '<div class="tm dot"><span data-b="pos"></span><small data-b="durlong"></small></div>' +
+        '<div class="pn"><button data-step="-1">Prev</button><button data-play><span data-b="playword"></span></button><button data-step="1">Next</button></div>' +
+        '<div class="pbar" data-seek><i></i></div>' +
         '<div class="menu">' + MODES.map(function (m) { return '<button class="opt" data-mode="' + m.id + '">' + m.long + '</button>'; }).join('') + '</div>' +
-        '<div class="dim"><span>Brightness</span><span class="dots" data-b="dimdots"></span><span data-b="bright"></span></div>' +
+        '<div class="dim"><span>Brightness</span><span class="dots" data-b="dimdots"></span><span data-b="bright"></span></div></div>' +
         '<canvas width="880" height="1000" data-canvas></canvas>' +
-        '<div class="cap"><span>Left</span><span data-b="bpmlong"></span><span>Right</span></div>' +
-        '<div class="tog"><button class="opt" data-toggle="pulse">Pulse</button><button class="opt" data-toggle="energy">Energy</button></div></div>';
+        '<div class="cap"><span class="cl">Left</span><span class="cr">Right</span></div>' +
+        '<div class="tog"><span class="bp" data-b="bpmlong"></span><button class="opt" data-toggle="pulse">Pulse</button><button class="opt" data-toggle="energy">Energy</button><button class="opt" data-power>Power</button></div></div>';
     },
     c: function () {
       var pil = function (side) { var h = '', i; for (i = 0; i < 7; i++) h += '<i style="--c:var(--' + side + i + ')"></i>'; return '<div class="pil ' + (side === 'L' ? 'l' : 'r') + '">' + h + '</div>'; };
@@ -67,20 +70,20 @@
         '<div class="modes">' + MODES.map(function (m) { return '<button data-mode="' + m.id + '">' + m.a + '</button>'; }).join('') + '</div>' +
         '<div class="br2"><span>Brightness</span><div class="br" data-bar><i></i></div><span data-b="bright"></span></div><div class="ft"><button class="pill" data-toggle="pulse">Pulse</button><button class="pill" data-toggle="energy">Energy</button></div>' +
         '<div class="bpm"><small data-b="bpmlabel"></small><span data-b="bpm"></span></div>' +
-        '<div class="tr"><button data-play><span data-b="playword"></span><span data-b="pos"></span></button><button data-step="1"><span>Next</span><span data-b="dur"></span></button><button data-open="full"><span>Full screen</span></button><button data-open="settings"><span>Settings</span></button></div>' +
-        pil('L') + pil('R') + '</div>';
+        '<div class="ctl"><button data-step="-1" aria-label="Previous">' + ICON.prev + '</button><button data-play aria-label="Play or pause"><span data-b="playicon"></span></button><button data-step="1" aria-label="Next">' + ICON.next + '</button></div>' + '<div class="tr"><button data-power><span>Power</span><span data-b="powerword"></span></button><button data-open="full"><span>Full screen</span></button><button data-open="settings"><span>Settings</span></button></div>' +
+        pil('L') + pil('R') + '<div class="pgs" data-seek><i></i></div></div>';
     },
     d: function () {
       var lamp = function (side) { var h = '', i; for (i = 0; i < 7; i++) h += '<i style="--c:var(--' + side + i + ')"></i>'; return '<div class="lampw ' + (side === 'L' ? 'l' : 'r') + '">' + h + '</div>'; };
       var pic = function (m) { return '<button class="m" data-mode="' + m.id + '">' + m.a + '</button>'; };
-      return '<div class="design D"><div class="wall"></div><div class="floor"></div>' + lamp('L') + lamp('R') +
+      return '<div class="design D">' + DBG + '' + lamp('L') + lamp('R') +
         '<div class="frame"><div></div></div>' +
         '<div class="credit"><div class="k">Now playing &nbsp;/&nbsp; <span data-b="src"></span></div><h3 data-b="title"></h3><p data-b="artistalbum"></p></div>' +
         '<div class="modes">' + MODES.map(pic).join('') + '</div>' +
         '<div class="dock"><div class="tp"><button data-step="-1" aria-label="Previous">' + ICON.prev + '</button><button data-play aria-label="Play or pause"><span data-b="playicon"></span></button><button data-step="1" aria-label="Next">' + ICON.next + '</button></div>' +
         '<div class="tl2"><span data-b="pos"></span><div class="tk" data-seek><i></i></div><span data-b="dur"></span></div>' +
         '<label style="display:flex;align-items:center;gap:10px">Brightness <input type="range" id="dBright" min="5" max="100" data-range aria-label="Brightness"></label>' +
-        '<button class="t" data-toggle="pulse">Pulse</button><button class="t" data-toggle="energy">Energy</button><button class="t" data-open="settings">Settings</button><button class="t" data-open="full">Full screen</button></div></div>';
+        '<button class="t" data-toggle="pulse">Pulse</button><button class="t" data-toggle="energy">Energy</button><button class="t" data-power>Power</button><button class="t" data-open="settings">Settings</button><button class="t" data-open="full">Full screen</button></div></div>';
     }
   };
 
@@ -97,8 +100,8 @@
     },
     b: function () {
       return '<div class="design B fs"><div class="top"><span>Glowtrack</span><span data-b="src"></span><button data-open="main" style="text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.55)">Exit</button></div>' +
-        '<div class="tt dot" data-b="titleU"></div><div class="ar a1" data-b="artistU"></div>' +
-        '<div class="tm dot"><span data-b="pos"></span><small data-b="durlong"></small><span class="pn"><button data-play><span data-b="playword"></span></button><button data-step="1">Next</button></span></div>' +
+        '<div class="fl"><div class="tt dot" data-b="titleU"></div><div class="ar a1" data-b="artistU"></div></div>' +
+        '<div class="tm dot"><span data-b="pos"></span><small data-b="durlong"></small><span class="pn"><button data-step="-1">Prev</button><button data-play><span data-b="playword"></span></button><button data-step="1">Next</button></span></div>' +
         '<canvas width="880" height="1000" data-canvas></canvas><div class="lyr dot" data-lyr></div><div class="pbar" data-seek><i></i></div>' +
         '<div class="dim"><span>Brightness</span><span class="dots" data-b="dimdots"></span><span data-b="bright"></span></div>' +
         '<div class="tog"><button class="opt" data-lyrics>Lyrics</button><button class="opt" data-toggle="pulse">Pulse</button><button class="opt" data-toggle="energy">Energy</button></div></div>';
@@ -106,11 +109,11 @@
     c: function () {
       return '<div class="design C fs"><div class="b1"></div><div class="b4"></div><div class="cv"></div><div class="ar" data-b="artistline"></div>' +
         '<div class="tl" data-b="title"></div><div class="tmr" data-b="pos"></div><div class="sub"><div data-b="src"></div><div data-b="bpmlong"></div><div data-b="modelong"></div></div><div class="lyr" data-lyr></div>' + pilC('L') + pilC('R') +
-        '<div class="tr2"><button data-play><span data-b="playword"></span></button><button data-step="1">Next</button></div>' +
+        '<div class="pgc"><div class="bar" data-seek><i></i></div><div class="tt2"><span data-b="pos"></span><span data-b="dur"></span></div></div>' + '<div class="ctl"><button data-step="-1" aria-label="Previous">' + ICON.prev + '</button><button data-play aria-label="Play or pause"><span data-b="playicon"></span></button><button data-step="1" aria-label="Next">' + ICON.next + '</button></div>' +
         '<div class="tr3"><button data-lyrics>Lyrics</button><button data-toggle="pulse">Pulse</button><button data-open="main">Exit</button></div></div>';
     },
     d: function () {
-      return '<div class="design D fs"><div class="wall"></div><div class="floor"></div><div class="frame"><div></div></div>' +
+      return '<div class="design D fs">' + DBG + '<div class="frame"><div></div></div>' +
         '<div class="credit"><div class="k">Now playing &nbsp;/&nbsp; <span data-b="src"></span></div><h3 data-b="title"></h3><p data-b="artistalbum"></p></div><div class="lyr" data-lyr></div>' +
         '<div class="mini"><button data-step="-1" aria-label="Previous">' + ICON.prev + '</button><button data-play aria-label="Play or pause"><span data-b="playicon"></span></button><button data-step="1" aria-label="Next">' + ICON.next + '</button>' +
         '<span data-b="pos"></span><span style="opacity:.5">/</span><span data-b="dur"></span><button class="lyb" data-lyrics aria-label="Show lyrics"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3.5h12M2 7h12M2 10.5h8M2 14h5"/></svg>Lyrics</button><button class="lyb" data-open="main" style="border-color:rgba(255,255,255,.4)">Exit</button></div></div>';
@@ -194,26 +197,26 @@
     b: function () {
       return '<div class="design B ph"><div class="top"><span>Glowtrack &nbsp;/&nbsp; <span data-b="src"></span></span><span class="tl"><button data-open="lyrics">Lyrics</button><button data-open="settings">Settings</button></span></div>' +
         '<div class="tt dot" data-b="titleU"></div><div class="ar" data-b="artistU"></div>' +
-        '<div class="tm dot"><span data-b="pos"></span><small data-b="durlong"></small><span class="pn"><button data-play><span data-b="playword"></span></button><button data-step="1">Next</button></span></div>' +
+        '<div class="tm dot"><span data-b="pos"></span><small data-b="durlong"></small><span class="pn"><button data-step="-1">Prev</button><button data-play><span data-b="playword"></span></button><button data-step="1">Next</button></span></div>' +
         '<canvas width="880" height="1000" data-canvas></canvas><div class="pbar" data-seek><i></i></div>' +
         '<div class="menu">' + MODES.map(function (m) { return '<button class="opt" data-mode="' + m.id + '">' + m.long + '</button>'; }).join('') + '</div>' +
         '<div class="dim"><span>Brightness</span><span class="dots" data-b="dimdots"></span><span data-b="bright"></span></div>' +
-        '<div class="tog"><button class="opt" data-toggle="pulse">Pulse</button><button class="opt" data-toggle="energy">Energy</button></div></div>';
+        '<div class="tog"><span class="bp" data-b="bpmlong"></span><button class="opt" data-toggle="pulse">Pulse</button><button class="opt" data-toggle="energy">Energy</button><button class="opt" data-power>Power</button></div></div>';
     },
     c: function () {
       return '<div class="design C ph"><div class="b1"></div><div class="b4"></div><div class="tl" data-b="title"></div><div class="ar" data-b="artistline"></div>' +
         '<div class="modes">' + MODES.map(function (m) { return '<button data-mode="' + m.id + '">' + m.a + '</button>'; }).join('') + '</div>' +
         '<div class="br2"><span>Brightness</span><div class="br" data-bar><i></i></div><span data-b="bright"></span></div><div class="ft"><button class="pill" data-toggle="pulse">Pulse</button><button class="pill" data-toggle="energy">Energy</button><span data-b="bpmlong"></span></div>' +
-        '<div class="nav2"><button data-open="lyrics">Lyrics</button><button data-open="settings">Settings</button></div><div class="tr"><button data-play><span data-b="playword"></span><span data-b="pos"></span></button><button data-step="1"><span>Next</span><span data-b="dur"></span></button></div>' + pilC('L') + pilC('R') + '</div>';
+        '<div class="ctl"><button data-step="-1" aria-label="Previous">' + ICON.prev + '</button><button data-play aria-label="Play or pause"><span data-b="playicon"></span></button><button data-step="1" aria-label="Next">' + ICON.next + '</button></div>' + '<div class="nav2"><button data-power>Power</button><button data-open="lyrics">Lyrics</button><button data-open="settings">Settings</button></div>' + pilC('L') + pilC('R') + '<div class="pgs" data-seek><i></i></div></div>';
     },
     d: function () {
       var pic = function (m) { return '<button class="m" data-mode="' + m.id + '">' + m.a + '</button>'; };
-      return '<div class="design D ph"><div class="wall"></div><div class="floor"></div>' + lampD('L') + lampD('R') + '<div class="frame"><div></div></div>' +
+      return '<div class="design D ph">' + DBG + '' + lampD('L') + lampD('R') + '<div class="frame"><div></div></div>' +
         '<div class="credit"><div class="k">Now playing &nbsp;/&nbsp; <span data-b="src"></span></div><h3 data-b="title"></h3><p data-b="artistalbum"></p></div>' +
         '<div class="modes">' + MODES.map(pic).join('') + '</div>' +
         '<div class="dock"><div class="tp"><button data-step="-1" aria-label="Previous">' + ICON.prev + '</button><button data-play aria-label="Play or pause"><span data-b="playicon"></span></button><button data-step="1" aria-label="Next">' + ICON.next + '</button></div>' +
         '<div class="tl2"><span data-b="pos"></span><div class="tk" data-seek><i></i></div><span data-b="dur"></span></div>' +
-        '<label style="display:flex;align-items:center;gap:10px">Brightness <input type="range" id="dBrightP" min="5" max="100" data-range aria-label="Brightness"></label><button class="t" data-toggle="pulse">Pulse</button><button class="t" data-toggle="energy">Energy</button></div><div class="nav3"><button class="m" data-open="lyrics">Lyrics</button><button class="m" data-open="settings">Settings</button></div></div>';
+        '<label style="display:flex;align-items:center;gap:10px">Brightness <input type="range" id="dBrightP" min="5" max="100" data-range aria-label="Brightness"></label><button class="t" data-toggle="pulse">Pulse</button><button class="t" data-toggle="energy">Energy</button></div><div class="nav3"><button class="m" data-power>Power</button><button class="m" data-open="lyrics">Lyrics</button><button class="m" data-open="settings">Settings</button></div></div>';
     }
   };
 
@@ -231,8 +234,13 @@
   function rgb(h) { if (Array.isArray(h)) return h; h = String(h || '#333333').replace('#', ''); if (h.length === 3) h = h.replace(/(.)/g, '$1$1'); var n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
   function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
   function css(c, k) { k = k == null ? 1 : k; return 'rgb(' + Math.round(c[0] * k) + ',' + Math.round(c[1] * k) + ',' + Math.round(c[2] * k) + ')'; }
+  function wl(c) { function f(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); } return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); }
+  function bestText(bg) {      // whichever of dark ink or cream reads better on this colour (WCAG contrast)
+    var L = wl(bg), dark = (L + 0.05) / (wl([20, 19, 17]) + 0.05), light = (wl([246, 243, 236]) + 0.05) / (L + 0.05);
+    return dark >= light ? '#141311' : '#f6f3ec';
+  }
   function lum(c) { return (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255; }
-  function fmt(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  function fmt(s, floor) { s = Math.max(0, floor ? Math.floor(s || 0) : Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
   function api(path, body) { return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Govee-App': '1' }, body: JSON.stringify(body || {}) }).catch(function () {}); }
   function q(sel) { return root.querySelectorAll(sel); }
 
@@ -260,8 +268,8 @@
   function lampZones(s, now) {
     var L = [], R = [], i;
     if (!s.is_powered_on) { for (i = 0; i < 7; i++) { L.push(OFF); R.push(OFF); } return { L: L, R: R, k: 1 }; }
-    var mode = s.preview_mode || 'smooth', f = s.flow;
-    if (f && mode !== 'off' && f.stops && f.stops.length > 1) {
+    var f = s.flow;
+    if (f && f.stops && f.stops.length > 1) {
       var st = parseStops(f), phase = f.phase + (now - T.tState) / 1000 / Math.max(2.5, f.cycle);
       for (i = 0; i < 7; i++) { L.push(sampleStops(st, phase + f.span * i / 6)); R.push(sampleStops(st, phase + f.right_offset + f.span * i / 6)); }
       if (f.inverted) { L.reverse(); R.reverse(); }
@@ -277,7 +285,7 @@
   function drawDots(canvas, z) {
     var c = canvas.getContext('2d'), W = canvas.width, H = canvas.height; c.clearRect(0, 0, W, H);
     var cols = 5, cell = 30, rowsPerZone = 4, rows = 28, gapX = 150, lampW = cols * cell, top = 70;
-    [[z.L, 90], [z.R, 90 + lampW + gapX + 40]].forEach(function (side) {
+    [[z.L, 195], [z.R, 195 + lampW + gapX + 40]].forEach(function (side) {
       var x0 = side[1], zs = side[0];
       for (var r = 0; r < rows; r++) {
         var col = zs[6 - Math.floor(r / rowsPerZone)], edge = (r === 0 || r === rows - 1) ? 0.55 : 1;
@@ -295,7 +303,7 @@
   /* ---- animation tick: only the lamp colours change here ---- */
   function tick() {
     var s = T.s; if (!s || !T.el || document.hidden) return;
-    var now = performance.now(), z = lampZones(s, now), el = T.el, i, sig = '';
+    var now = performance.now(), z = lampZones(s, now), el = root, i, sig = '';
     var out = [];
     for (i = 0; i < 7; i++) { out.push(css(z.L[i], z.k)); }
     for (i = 0; i < 7; i++) { out.push(css(z.R[i], z.k)); }
@@ -303,20 +311,20 @@
     if (sig === T.cache.zones) return;
     T.cache.zones = sig;
     for (i = 0; i < 7; i++) { el.style.setProperty('--L' + i, out[i]); el.style.setProperty('--R' + i, out[7 + i]); }
-    var cv = el.querySelector('[data-canvas]'); if (cv) drawDots(cv, z);
+    var cv = T.el.querySelector('[data-canvas]'); if (cv) drawDots(cv, z);
   }
   function schedule() {
     var s = T.s, key = '';
-    if (s && T.theme && T.theme !== 'classic' && !document.hidden && s.flow && s.is_powered_on && (s.preview_mode || 'smooth') !== 'off') key = (s.preview_mode || 'smooth');
+    if (s && T.theme && T.theme !== 'classic' && !document.hidden && s.flow && s.is_powered_on) key = (s.preview_mode || 'smooth');
     if (key === T.animKey) return;
     T.animKey = key; if (T.anim) { clearInterval(T.anim); T.anim = null; }
-    if (key) T.anim = setInterval(tick, key === 'smooth' ? 125 : 500);
+    if (key) T.anim = setInterval(tick, key === 'smooth' ? 110 : key === 'low' ? 250 : 400);
   }
   function secTick() {
     var s = T.s; if (!s || !T.el || document.hidden) return;
     var p = pos(), dur = s.track_dur || 0;
-    T.el.style.setProperty('--prog', dur ? (p / dur).toFixed(4) : '0');
-    setB('pos', fmt(p));
+    root.style.setProperty('--prog', dur ? (p / dur).toFixed(4) : '0');
+    setB('pos', fmt(p, true));
     if (showsLyrics()) paintLyrics();
   }
 
@@ -339,13 +347,13 @@
     var d = T.theme, pal = palette(s), palSig = pal.join(','), mode = modeOf(s);
     if (T.sig.pal !== palSig) {
       T.sig.pal = palSig;
-      pal.forEach(function (c, i) { var r = rgb(c); el.style.setProperty('--p' + i, c); el.style.setProperty('--t' + i, lum(r) > 0.56 ? '#141311' : '#f6f3ec'); });
+      pal.forEach(function (c, i) { var r = rgb(c); root.style.setProperty('--p' + i, c); root.style.setProperty('--t' + i, bestText(r)); });
       if (d === 'c') root.style.background = pal[0]; else root.style.background = '';
-      el.style.setProperty('--cov', 'radial-gradient(circle at 24% 22%, ' + pal[0] + ' 0 34%, transparent 62%), radial-gradient(circle at 78% 78%, ' + pal[1] + ' 0 30%, transparent 60%), linear-gradient(135deg, ' + pal[2] + ', ' + pal[3] + ')');
+      root.style.setProperty('--cov', 'radial-gradient(circle at 24% 22%, ' + pal[0] + ' 0 34%, transparent 62%), radial-gradient(circle at 78% 78%, ' + pal[1] + ' 0 30%, transparent 60%), linear-gradient(135deg, ' + pal[2] + ', ' + pal[3] + ')');
       T.sig.art = null;
     }
     var artSig = s.art_url || '';
-    if (T.sig.art !== artSig) { T.sig.art = artSig; if (artSig) el.style.setProperty('--cov', 'url("' + artSig + '")'); }
+    if (T.sig.art !== artSig) { T.sig.art = artSig; if (artSig) root.style.setProperty('--cov', 'url("' + artSig + '")'); }
     setB('lampsline', (s.online_count || 0) + ' of ' + (s.configured_count || 0) + ' lamps online');
     var src = s.source_name || 'Spotify', track = s.track || '', artist = s.artist || '', album = s.album || '';
     setB('title', track); setB('titleU', track.toUpperCase()); setB('artist', artist); setB('artistU', artist.toUpperCase());
@@ -354,9 +362,10 @@
     var bpm = Math.round(s.current_bpm || 0); setB('bpm', String(bpm)); setB('bpmlong', bpm + ' bpm'); setB('bpmlabel', 'BPM');
     setB('tempotext', bpm + ' BPM, ' + (s.bpm_known === false ? 'not found: tap to set' : (s.bpm_source || '')));
     var mdef = MODES.filter(function (m) { return m.id === mode; })[0]; setB('modelong', mdef ? mdef.long : '');
+    setB('powerword', s.is_powered_on ? 'on' : 'off');
     setBH('playicon', s.is_playing ? ICON.pause : ICON.play); setB('playword', s.is_playing ? 'Pause' : 'Play');
     var br = T.ov.bright && T.ov.bright.until > performance.now() ? T.ov.bright.v : s.brightness;
-    setB('bright', br + '%'); el.style.setProperty('--bright', br);
+    setB('bright', br + '%'); root.style.setProperty('--bright', br);
     q('[data-mode]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-mode') === mode); });
     q('[data-toggle]').forEach(function (b) { var k = b.getAttribute('data-toggle'); b.classList.toggle('on', k === 'pulse' ? !!s.music_pulse : !!s.dynamic_intensity); });
     q('[data-power]').forEach(function (b) { b.classList.toggle('on', !!s.is_powered_on); });
@@ -410,6 +419,19 @@
     });
   }
 
+  /* ---- long titles: shrink a title until it fits in a few lines ---- */
+  function fitLines(sel, maxLines) {
+    q(sel).forEach(function (el) {
+      var key = el.textContent + '|' + el.closest('.design').className + '|' + root.clientWidth;
+      if (el._fl === key) return; el._fl = key;
+      el.style.fontSize = '';
+      var cs = getComputedStyle(el), size = parseFloat(cs.fontSize), lh = parseFloat(cs.lineHeight) / size;
+      if (!(lh > 0)) lh = 1.2;
+      var min = size * 0.5;
+      while (size > min) { el.style.fontSize = size + 'px'; if (el.offsetHeight <= size * lh * maxLines + 2) break; size -= 2; }
+    });
+  }
+
   /* ---- Poster title: shrink until the whole title fits its block ---- */
   function fitTitles() {
     q('.C .tl').forEach(function (el) {
@@ -417,6 +439,11 @@
       var key = el.textContent + '|' + fs + ly + ph; if (el._fit === key) return; el._fit = key;
       var size = ph ? 140 : !fs ? 128 : ly ? 56 : 120;
       while (size > 26) { el.style.fontSize = size + 'px'; if (el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1) break; size -= 3; }
+    });
+    fitLines('.A .ttl', 2); fitLines('.A.fs .big', 3); fitLines('.B.fs .tt', 3); fitLines('.D .credit h3', 2);
+    q('.B.m .tt').forEach(function (el) {             // Dot title: at most two lines
+      var key = el.textContent; if (el._fit === key) return; el._fit = key;
+      var size = 68; while (size > 34) { el.style.fontSize = size + 'px'; if (el.offsetHeight <= size * 0.94 * 2 + 3) break; size -= 3; }
     });
   }
 
@@ -473,6 +500,8 @@
     if (scroll) root.innerHTML = '<div class="tscroll">' + html + '</div>';
     else root.innerHTML = '<div class="tfit"><div class="tscale">' + html + '</div></div>';
     T.el = root.querySelector('.design');
+    var dbg = root.querySelector('.design .dbg'); if (dbg) root.insertBefore(dbg, root.firstChild);
+    root.setAttribute('data-k', kind);
     var dots = q('[data-b="dimdots"]');
     dots.forEach(function (h) { for (var i = 1; i <= 20; i++) { var b = document.createElement('button'); b.setAttribute('data-bright', i * 5); b.setAttribute('aria-label', 'Brightness ' + i * 5); h.appendChild(b); } });
     q('[data-knob]').forEach(bindKnob);
@@ -554,6 +583,13 @@
   }
 
   root.addEventListener('click', function (e) {
+    var dotsRow = e.target.closest('[data-b="dimdots"], .sd');
+    if (dotsRow && T.s) {          // dot rows: the nearest dot to the tap wins
+      var rr = dotsRow.getBoundingClientRect(), fr = Math.max(0, Math.min(1, (e.clientX - rr.left) / rr.width));
+      if (dotsRow.matches('.sd')) { var b0 = dotsRow.querySelector('button'), k0 = b0.getAttribute('data-sdk'), g = RANGE[k0]; setNum(k0, g[0] + (g[1] - g[0]) * fr); }
+      else sendBright(Math.max(5, Math.round(fr * 20) * 5));
+      return;
+    }
     var t = e.target.closest('[data-open],[data-mode],[data-toggle],[data-play],[data-step],[data-power],[data-bright],[data-bar],[data-lyrics],[data-st],[data-sdv],[data-sb],[data-segv],[data-act],[data-seek],[data-swv],[data-lt]');
     if (!t || !T.s) return;
     var s = T.s;
@@ -586,6 +622,7 @@
     var tag = (e.target && e.target.tagName) || '';
     if (/INPUT|SELECT|TEXTAREA/.test(tag)) return;
     if (e.key === 'Escape' && T.screen !== 'main') { setScreen('main'); e.preventDefault(); }
+    else if (e.key === ' ' && T.s) { api('/api/playback/playpause'); e.preventDefault(); }
     else if ((e.key === 'l' || e.key === 'L') && T.screen === 'full') { T.lyrics = !T.lyrics; T.lastLy = ''; render(); }
   });
   document.addEventListener('fullscreenchange', function () { if (!document.fullscreenElement && T.screen === 'full') { T.screen = 'main'; render(); } });
@@ -595,7 +632,7 @@
     if (document.hidden) { if (T.anim) { clearInterval(T.anim); T.anim = null; T.animKey = ''; } if (T.sec) { clearInterval(T.sec); T.sec = null; } }
     else { startSec(); render(); }
   });
-  function startSec() { if (!T.sec && T.theme && T.theme !== 'classic' && !document.hidden) T.sec = setInterval(secTick, 1000); }
+  function startSec() { if (!T.sec && T.theme && T.theme !== 'classic' && !document.hidden) T.sec = setInterval(secTick, 250); }
 
   /* ---- public ---- */
   function applyClass() {
@@ -607,7 +644,10 @@
     active: function () { return !!T.theme && T.theme !== 'classic'; },
     current: function () { return T.theme || 'classic'; },
     onState: function (s) {
-      T.s = s; T.tState = performance.now(); T.basePos = s.player_pos || 0;
+      var prev = T.s, nowT = performance.now(), sp = s.player_pos || 0;
+      if (prev && prev.track === s.track && prev.is_playing && s.is_playing && Math.abs(sp - pos()) < 0.7) { T.basePos = pos() + (sp - pos()) * 0.25; }
+      else T.basePos = sp;
+      T.tState = nowT; T.s = s;
       if (T.theme == null) {
         var forced = null; try { forced = new URLSearchParams(location.search).get('theme'); } catch (e) {}
         T.theme = (forced && THEMES.indexOf(forced) >= 0) ? forced : ((LS && LS.getItem('glowtrack.theme')) || s.default_theme || 'classic');
@@ -617,6 +657,10 @@
       if (!Themes.active()) return false;
       if (document.hidden) return true;
       startSec(); render(); return true;
+    },
+    view: function (theme, screen, lyrics) {          // for the layout checker: jump to a design and screen without saving
+      T.theme = theme; T.screen = screen; T.lyrics = !!lyrics; T.built = ''; applyClass();
+      if (T.s && theme !== 'classic') { startSec(); render(); }
     },
     set: function (name) {
       if (THEMES.indexOf(name) < 0) return;

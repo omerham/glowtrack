@@ -37,7 +37,7 @@ ATTENTION_RGB = (255, 0, 0)
 LAMP_FPS = 15        # colour updates per second sent to the lamps in moving modes
 ZONE_SPAN = 0.5      # 7-Zone: each lamp shows half the colour loop, top to bottom
 DUO_OFFSET = 0.38    # Two-Lamp moving: right lamp is this far ahead in the loop
-WAVE_OFFSET = 0.08   # Ambient Wave: right lamp trails slightly
+WAVE_OFFSET = 0.0     # Colour Fade: both lamps show the same colour at the same time
 
 # Ads from other players usually just have one of these as their title/artist
 AD_TITLES = {"ad", "ads", "advert", "sponsored", "sponsored ad", "sponsored content"}
@@ -673,6 +673,23 @@ class AppState:
     # ------------------------------------------------------------------
     # State for the dashboard
     # ------------------------------------------------------------------
+    FLOW_STEPS = 96
+
+    def _flow_stops(self):
+        """The colour loop sampled finely, exactly as it reaches the lamps (same blending and the same
+        lamp colour finishing), so a dashboard that slides along it shows what the lamps show. Cached:
+        it only changes with the palette or the dark-colour boost."""
+        key = (tuple(tuple(c) for c in self.current_lamp_palette), round(self.dark_boost, 3))
+        cached = getattr(self, "_flow_cache", None)
+        if cached and cached[0] == key:
+            return cached[1]
+        n = self.FLOW_STEPS
+        stops = [[round(i / n, 4), _hex(led_finish(sample_palette_continuous(self.current_lamp_palette, i / n), self.dark_boost))]
+                 for i in range(n)]
+        stops.append([1.0, stops[0][1]])
+        self._flow_cache = (key, stops)
+        return stops
+
     def _flow_info(self):
         """What the moving modes are doing, so the dashboard can animate the
         lamp preview itself (smooth, and nearly free) instead of being sent
@@ -682,8 +699,7 @@ class AppState:
         cycle = max(2.5, self.flow_speed)
         now = time.time()
         phase = (self.phase + (now - self.phase_time) / cycle) % 1.0
-        stops = [[round(p, 4), _hex(led_finish(c, self.dark_boost))]
-                 for p, c in flow_gradient(self.current_lamp_palette)]
+        stops = self._flow_stops()
         if self.spatial_mode == "segmented":
             span, right = ZONE_SPAN, 0.0
         elif self.spatial_mode == "duo":

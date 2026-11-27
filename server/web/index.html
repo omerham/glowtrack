@@ -291,7 +291,7 @@
           <span class="w-6 h-6 rounded-lg flex items-center justify-center icon-container border">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c3-4 6-4 9 0s6 4 9 0 6-4 9 0"/></svg>
           </span>
-          <span class="text-xs font-bold text-white title-span">Ambient Wave</span>
+          <span class="text-xs font-bold text-white title-span">Colour Fade</span>
         </div>
         <span class="text-[11px] text-slate-400 leading-tight">Liquid spectrum flow</span>
       </div>
@@ -407,7 +407,7 @@
             <div class="st-label">Full-screen motion <span id="fsMotionVal" class="st-val">Very slow</span></div>
             <input type="range" id="fsMotionSlider" min="0" max="5" step="1" value="1" oninput="onSetting('fsMotionVal', FS_MOTION_NAMES[this.value]); applyFsMotion(+this.value); sendSetting('/api/fs_motion', {value: parseInt(this.value)}, 150)">
           </div>
-          <p class="st-hint">Colour cycle sets the speed of Ambient Wave and 7-Zone Fade. Song fade is how long lamps take to change to a new song.</p>
+          <p class="st-hint">Colour cycle sets the speed of Colour Fade and 7-Zone Fade. Song fade is how long lamps take to change to a new song.</p>
         </section>
 
         <!-- Beat pulse -->

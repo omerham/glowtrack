@@ -561,7 +561,7 @@ function renderLamps(s) {
     htmlIf(b1, `${dot(left[0])}${left[0]}`);
     htmlIf(b2, `${dot(right[0])}${right[0]}`);
   } else {
-    status = (s.motion_mode === 'static' ? 'Solid' : 'Ambient Wave') + ` • ${s.brightness}%`;
+    status = (s.motion_mode === 'static' ? 'Solid' : 'Colour Fade') + ` • ${s.brightness}%`;
     htmlIf(b1, `${dot(left[0])}${left[0]}`);
     htmlIf(b2, `${dot(right[0])}${right[0]}`);
   }
