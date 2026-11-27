@@ -83,6 +83,7 @@ STATIC_FILES = {
     "/favicon.ico": "image/x-icon",
     "/favicon.svg": "image/svg+xml",
     "/fonts.css": "text/css; charset=utf-8",
+    "/demo.js": "application/javascript; charset=utf-8",
 }
 # the dashboard's fonts, stored in web/fonts so the page never asks another website for them
 _FONT_DIR = os.path.join(WEB_DIR, "fonts")

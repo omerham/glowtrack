@@ -1044,6 +1044,30 @@ class WebFilesTest(unittest.TestCase):
         self.assertIn('env["GOVEE_RELOAD"] = "0"', swift[i:i + 400])         # only the self-contained app (it has vendor/)
 
 
+class DemoModeTest(unittest.TestCase):
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def test_demo_mode_is_served_only_on_request_and_cannot_send_commands(self):
+        import web
+        self.assertIn("/demo.js", web.STATIC_FILES)
+        html = open(os.path.join(web.WEB_DIR, "index.html")).read()
+        self.assertIn("/[?&]demo=1/.test(location.search)", html)          # loaded only when ?demo=1 is in the address
+        demo = open(os.path.join(web.WEB_DIR, "demo.js")).read()
+        i = demo.index("window.fetch = function")
+        self.assertIn("if (post) return json(", demo[i:i + 400])             # every POST is swallowed, so no real command is sent
+        self.assertNotIn("sendBeacon", demo)
+        for real in ("192.168.86", "token="):                                  # no real addresses; the pairing link is a dummy
+            self.assertNotIn(real, demo.replace("token=demo-only", ""))
+
+    def test_readme_pictures_exist(self):
+        import re
+        readme = open(os.path.join(self.ROOT, "README.md")).read()
+        pics = re.findall(r'docs/screenshots/[\w-]+\.png', readme)
+        self.assertGreaterEqual(len(set(pics)), 13)                            # five main screens' worth plus lyrics and phones
+        for pic in set(pics):
+            self.assertTrue(os.path.exists(os.path.join(self.ROOT, pic)), pic)
+
+
 class ConfigSaveTest(unittest.TestCase):
     def test_many_threads_saving_at_once_never_lose_the_file(self):
         import json

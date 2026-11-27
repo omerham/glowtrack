@@ -40,6 +40,12 @@ privately to the maintainer rather than in a public issue.
 a mockup, but that pipeline is gone). Edit them directly, then follow the checks above: run
 `tools/layout-lint.js` and look at every screen, including with a very long title.
 
+## Screenshots
+
+The README pictures come from demo mode (a made-up song and pretend lamps, see `server/web/demo.js`).
+With the server running and Google Chrome installed, `tools/make_screenshots.py` retakes all of them into
+`docs/screenshots/`. Run it after any change to how a design looks.
+
 ## Releasing
 
 `tools/release.sh <version> <notes.md>` does the whole release; see [docs/releasing.md](docs/releasing.md).

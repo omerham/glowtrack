@@ -17,7 +17,54 @@ Pick the look you want. They are all the same app, and you can switch any time i
 | [Glowtrack-d.zip](https://github.com/omerham/glowtrack/releases/latest/download/Glowtrack-d.zip) | **D, Stage**: the framed cover over a living, drifting background |
 | [Glowtrack-classic.zip](https://github.com/omerham/glowtrack/releases/latest/download/Glowtrack-classic.zip) | **Classic**: the original dashboard |
 
-![The Glowtrack dashboard](docs/screenshot.png)
+### The four designs
+
+<table>
+<tr>
+<td width="50%"><a href="docs/screenshots/a-instrument-main.png"><img src="docs/screenshots/a-instrument-main.png" alt="Design A, Instrument: a hardware panel"></a><br><b>A, Instrument</b>: a hardware panel with keys, a knob and LED bars</td>
+<td width="50%"><a href="docs/screenshots/b-dot-main.png"><img src="docs/screenshots/b-dot-main.png" alt="Design B, Dot: dot-matrix type"></a><br><b>B, Dot</b>: dot-matrix type, the lamps drawn in dots</td>
+</tr>
+<tr>
+<td width="50%"><a href="docs/screenshots/c-poster-main.png"><img src="docs/screenshots/c-poster-main.png" alt="Design C, Poster: flat colour blocks"></a><br><b>C, Poster</b>: flat colour blocks and huge condensed type</td>
+<td width="50%"><a href="docs/screenshots/d-stage-main.png"><img src="docs/screenshots/d-stage-main.png" alt="Design D, Stage: a framed cover over a living background"></a><br><b>D, Stage</b>: the framed cover over a living, drifting background</td>
+</tr>
+</table>
+
+<details>
+<summary>More: full screen with synced lyrics, phone layouts, and the Classic dashboard</summary>
+
+**Full screen with synced lyrics** (each design)
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/a-instrument-lyrics.png" alt="A, lyrics"></td>
+<td width="50%"><img src="docs/screenshots/b-dot-lyrics.png" alt="B, lyrics"></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/c-poster-lyrics.png" alt="C, lyrics"></td>
+<td width="50%"><img src="docs/screenshots/d-stage-lyrics.png" alt="D, lyrics"></td>
+</tr>
+</table>
+
+**On a phone** (held upright, the layout changes)
+
+<table>
+<tr>
+<td width="25%"><img src="docs/screenshots/a-instrument-phone.png" alt="A, phone"></td>
+<td width="25%"><img src="docs/screenshots/b-dot-phone.png" alt="B, phone"></td>
+<td width="25%"><img src="docs/screenshots/c-poster-phone.png" alt="C, phone"></td>
+<td width="25%"><img src="docs/screenshots/d-stage-phone.png" alt="D, phone"></td>
+</tr>
+</table>
+
+**Classic**, the original dashboard
+
+<img src="docs/screenshots/classic-main.png" alt="The Classic dashboard" width="720">
+
+</details>
+
+These pictures use a made-up song and pretend lamps. Want to look around without lamps or music? Open
+`http://127.0.0.1:8765/?demo=1` (add `&theme=a`, `b`, `c` or `d`): nothing is read or sent in demo mode.
 
 > Unofficial hobby project. Not affiliated with or endorsed by Govee or Spotify.
 
