@@ -94,7 +94,8 @@ function connectEvents() {
     }
     window._webVersion = window._webVersion || state.web_version;
     currentState = state;
-    if (isDocVisible) updateUI(state);
+    const themed = window.Themes && Themes.onState(state);
+    if (!themed && isDocVisible) updateUI(state);
     if (!window._fittedOnce) { window._fittedOnce = true; scheduleFit(); }
   };
 }
@@ -560,7 +561,7 @@ function renderLamps(s) {
     htmlIf(b1, `${dot(left[0])}${left[0]}`);
     htmlIf(b2, `${dot(right[0])}${right[0]}`);
   } else {
-    status = (s.motion_mode === 'static' ? 'Spotify Solid' : 'Ambient Wave') + ` • ${s.brightness}%`;
+    status = (s.motion_mode === 'static' ? 'Solid' : 'Ambient Wave') + ` • ${s.brightness}%`;
     htmlIf(b1, `${dot(left[0])}${left[0]}`);
     htmlIf(b2, `${dot(right[0])}${right[0]}`);
   }

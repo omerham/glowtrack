@@ -42,6 +42,10 @@ def save_config(cfg):
 
 # Other devices on the Wi-Fi must be "paired" once (open the link shown in Settings on
 # this Mac). GOVEE_OPEN_LAN=1 turns that off (anyone on the network can then control it).
+DEFAULT_THEME = os.environ.get("GOVEE_DEFAULT_THEME", "classic").strip().lower()
+if DEFAULT_THEME not in ("classic", "a", "b", "c", "d"):
+    DEFAULT_THEME = "classic"
+
 OPEN_LAN = os.environ.get("GOVEE_OPEN_LAN", "").strip() in ("1", "true", "yes")
 
 

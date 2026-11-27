@@ -34,11 +34,30 @@ _album = ""              # album of the current system-player song (for lyrics)
 _helper_state = None     # None = not tried, True = ready, False = unavailable
 _warned = False
 _sysvol_read_at = 0.0
+_bundle = ""             # bundle id of the app Now Playing reported
 _sample_t = 0.0         # when the song position returned by get_track_info() was read
 
 
 def active_source():
     return _active
+
+
+_NAMES = {"com.apple.Music": "Apple Music", "com.google.Chrome": "Chrome", "com.apple.Safari": "Safari",
+          "org.mozilla.firefox": "Firefox", "company.thebrowser.Browser": "Arc", "com.microsoft.edgemac": "Edge",
+          "com.tidal.desktop": "Tidal", "com.amazon.music": "Amazon Music", "com.deezer.deezer-desktop": "Deezer"}
+
+
+def source_name():
+    """Friendly name of what is playing: Spotify, Apple Music, Chrome, ..."""
+    if _active == "spotify":
+        return "Spotify"
+    if _active == MUSIC_SOURCE:
+        return "Apple Music"
+    return _NAMES.get(_bundle) or (_bundle.rsplit(".", 1)[-1].title() if _bundle else "Now Playing")
+
+
+def album():
+    return spotify.EXTRAS.get("album", "") if _active == "spotify" else _album
 
 
 def last_sample_time():
@@ -96,10 +115,16 @@ def _read_system_volume():
 # macOS Now Playing helper
 # ---------------------------------------------------------------------------
 def _helper_ready():
-    """Builds the small helper library on first use (needs Xcode's command-line tools)."""
-    global _helper_state, _warned
+    """Builds the small helper library on first use (needs Xcode's command-line tools).
+    A downloaded app ships it prebuilt, so nothing needs compiling."""
+    global _helper_state, _warned, _LIB
     if _helper_state is not None:
         return _helper_state
+    prebuilt = os.path.join(_SRC_DIR, "libmr.dylib")
+    if os.path.exists(prebuilt):
+        _LIB = prebuilt
+        _helper_state = True
+        return True
     try:
         if not os.path.exists(_LIB) or os.path.getmtime(_LIB) < os.path.getmtime(_SRC):
             os.makedirs(_LIB_DIR, exist_ok=True)
@@ -147,7 +172,7 @@ def _art_key(info):
 # ---------------------------------------------------------------------------
 def get_track_info():
     """(is_playing, track, artist, art_url, pos_sec, dur_sec, track_id) - same as Spotify's."""
-    global _active, _album, _sample_t
+    global _active, _album, _sample_t, _bundle
     t0 = time.time()
     sp = spotify.get_spotify_track_info()
     t1 = time.time()
@@ -159,6 +184,7 @@ def get_track_info():
     _sample_t = time.time() - 0.01  # Now Playing works the position out right as the helper finishes
     if info and (info.get("playing") or not sp[1]):
         _album = info.get("album", "")
+        _bundle = info.get("bundle", "")
         art = _art_key(info) if info.get("has_art") else None
         if info.get("bundle") == MUSIC_BUNDLE:
             _active = MUSIC_SOURCE

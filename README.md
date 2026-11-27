@@ -49,7 +49,7 @@ The first launch asks for permission to control Spotify and to use the local net
 ### Modes
 | Mode | Motion |
 |---|---|
-| Spotify Solid | still – one album colour on both lamps |
+| Solid | still – one album colour on both lamps |
 | Ambient Wave | moving – both lamps flow through the album colours together |
 | Two-Lamp Split | still – a different album colour on each lamp |
 | 7-Zone Fade | moving – album colours flow up the 7 zones of each lamp |
@@ -117,6 +117,30 @@ These drivers (`server/devices.py`) were written from the products' published pr
 checked against fake devices in the tests, but **have not been tried on real hardware yet**. If you
 try one, please report whether it worked. Other Govee models that report their model name are
 driven with a single colour, since only the H6076's zone packets are known.
+
+## Designs
+
+Settings → **Design** switches the whole look: the main screen, Settings and Full Screen (with
+synced lyrics) all change together. **Classic** is the original; the four new ones are:
+
+- **A Instrument**: a hardware panel with keys, a knob, LED bars and a tick ruler.
+- **B Dot**: dot-matrix type, with the lamps drawn in dots.
+- **C Poster**: flat colour blocks and huge condensed type.
+- **D Stage**: the framed cover on a wall washed with the lamps' colours.
+
+Each works on a computer, tablet and phone (held upright the layout changes). They are light on the
+CPU: the page is built once per screen, only the lamp colours change on a timer (about 8 times a
+second while the lamps move, slower on "Low power", not at all when the lamp preview is off, the
+window is hidden or the lamps are still), and the clock and lyrics tick once a second.
+In Full Screen the controls fade away after a few seconds and the song (or lyrics) stays.
+
+## Downloads
+
+`mac/build.sh --dist` builds self-contained apps, one per design, in `build/dist`
+(`Glowtrack-classic.zip`, `-a`, `-b`, `-c`, `-d`). Each carries its own server, Pillow and the
+Now Playing helper and starts on its design (you can still change it in Settings). They are
+not notarised: right-click → Open the first time. They need `/usr/bin/python3` (macOS asks to
+install the command-line tools if it is missing) and were built for Apple silicon.
 
 ## Which players work
 

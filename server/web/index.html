@@ -18,6 +18,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/tailwind.css">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Big+Shoulders+Display:wght@700..900&family=DM+Mono:wght@400;500&family=Doto:wght@100..900&family=Geist+Mono:wght@400..700&family=Instrument+Sans:wght@400..700&family=Syne:wght@600..800&display=swap">
+  <link rel="stylesheet" href="/themes.css">
 </head>
 <body class="bg-[#060A1A] text-slate-100 min-h-screen flex items-center justify-center p-3 antialiased relative overflow-x-hidden app-body">
 
@@ -26,6 +28,8 @@
   <div id="pageBgA" class="page-bg" style="opacity:1"></div>
   <div id="pageBgB" class="page-bg" style="opacity:0"></div>
   <div class="fixed -bottom-40 -left-40 w-[500px] h-[500px] rounded-full pointer-events-none opacity-15 blur-[100px] bg-slate-800"></div>
+
+  <div id="themeRoot" hidden></div>
 
   <!-- Studio Shell Card -->
   <div id="appShell" class="w-full max-w-4xl bg-[#12151B]/95 border border-white/[0.08] rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden ring-1 ring-white/[0.04]">
@@ -277,7 +281,7 @@
           <span class="w-6 h-6 rounded-lg flex items-center justify-center icon-container border">
             <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg>
           </span>
-          <span class="text-xs font-bold text-white title-span">Spotify Solid</span>
+          <span class="text-xs font-bold text-white title-span">Solid</span>
         </div>
         <span class="text-[11px] text-slate-400 leading-tight">Bold match • No shifting</span>
       </div>
@@ -464,6 +468,23 @@
           <p class="st-hint">Only changes the preview on this screen, not your real lamps.</p>
         </section>
 
+        <!-- Design -->
+        <section class="st-section">
+          <div class="st-row st-row-first">
+            <div>
+              <div class="text-white font-semibold">Design</div>
+              <div class="st-hint" style="margin:2px 0 0">Pick how Glowtrack looks. Each design changes the main screen, Settings and Full Screen.</div>
+            </div>
+          </div>
+          <div class="st-row" style="flex-wrap:wrap;gap:6px">
+            <button onclick="Themes.set('classic')" class="st-btn">Classic</button>
+            <button onclick="Themes.set('a')" class="st-btn">A Instrument</button>
+            <button onclick="Themes.set('b')" class="st-btn">B Dot</button>
+            <button onclick="Themes.set('c')" class="st-btn">C Poster</button>
+            <button onclick="Themes.set('d')" class="st-btn">D Stage</button>
+          </div>
+        </section>
+
         <!-- Other lights -->
         <section class="st-section" id="devicesSection">
           <div class="st-row st-row-first">
@@ -584,5 +605,6 @@
   </div>
 
   <script src="/app.js"></script>
+  <script src="/themes.js"></script>
 </body>
 </html>

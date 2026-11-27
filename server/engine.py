@@ -8,7 +8,7 @@ import zlib
 
 from colors import (blend_colours, build_7_zone_palette, extract_spotify_palette, flow_gradient,
                     get_dual_split_colors, led_finish, lift_frame, sample_palette_continuous)
-from config import AD_WHITE, STARTUP_PALETTE, TARGET_IPS, clamp, load_config, save_config
+from config import AD_WHITE, DEFAULT_THEME, STARTUP_PALETTE, TARGET_IPS, clamp, load_config, save_config
 import devices
 from lamps import GoveeController
 import players
@@ -774,6 +774,9 @@ class AppState:
             "discovered_devices": self.discovered,
             "scanning_devices": self.scanning,
             "player": players.active_source(),
+            "source_name": players.source_name(),
+            "album": players.album(),
+            "default_theme": DEFAULT_THEME,
             "can_shuffle_repeat": players.can_shuffle_repeat(),
         }
 

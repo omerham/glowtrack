@@ -70,6 +70,8 @@ STATIC_FILES = {
     "/index.html": "text/html; charset=utf-8",
     "/app.js": "application/javascript; charset=utf-8",
     "/app.css": "text/css; charset=utf-8",
+    "/themes.css": "text/css; charset=utf-8",
+    "/themes.js": "application/javascript; charset=utf-8",
     "/tailwind.css": "text/css; charset=utf-8",
     "/manifest.webmanifest": "application/manifest+json",
     "/icon-180.png": "image/png",

@@ -4,7 +4,7 @@ import time
 
 
 # Volume / shuffle / repeat, read by the same AppleScript call as the track
-EXTRAS = {"volume": None, "shuffle": False, "repeat": False}
+EXTRAS = {"volume": None, "shuffle": False, "repeat": False, "album": ""}
 
 
 def get_spotify_track_info():
@@ -21,7 +21,8 @@ def get_spotify_track_info():
             set tVol to sound volume
             set tShuf to shuffling
             set tRep to repeating
-            return pState & " ||| " & tName & " ||| " & aName & " ||| " & artUrl & " ||| " & tPos & " ||| " & tDur & " ||| " & tId & " ||| " & tVol & " ||| " & tShuf & " ||| " & tRep
+            set tAlb to album of current track
+            return pState & " ||| " & tName & " ||| " & aName & " ||| " & artUrl & " ||| " & tPos & " ||| " & tDur & " ||| " & tId & " ||| " & tVol & " ||| " & tShuf & " ||| " & tRep & " ||| " & tAlb
         end tell
     else
         return "NOT_RUNNING"
@@ -47,6 +48,7 @@ def get_spotify_track_info():
                     pass
                 EXTRAS["shuffle"] = parts[8].strip().lower() == "true"
                 EXTRAS["repeat"] = parts[9].strip().lower() == "true"
+            EXTRAS["album"] = parts[10].strip() if len(parts) >= 11 else ""
             return is_playing, parts[1], parts[2], parts[3], pos, dur, track_id
     except Exception:
         pass

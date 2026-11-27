@@ -83,6 +83,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     // MARK: - Python server
 
     private var serverScript: String {
+        // A downloaded app carries its own copy of the server
+        if let res = Bundle.main.resourcePath {
+            let bundled = res + "/server/app.py"
+            if FileManager.default.fileExists(atPath: bundled) { return bundled }
+        }
         let configured = Bundle.main.object(forInfoDictionaryKey: "GoveeServerPath") as? String
             ?? "~/GoveeSpotifySync/server/app.py"
         return (configured as NSString).expandingTildeInPath
@@ -116,7 +121,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         p.arguments = ["-u", script]
-        p.environment = ProcessInfo.processInfo.environment.merging(["GOVEE_PORT": String(serverPort)]) { _, new in new }
+        var env = ["GOVEE_PORT": String(serverPort)]
+        if let theme = Bundle.main.object(forInfoDictionaryKey: "GoveeDefaultTheme") as? String { env["GOVEE_DEFAULT_THEME"] = theme }
+        if let res = Bundle.main.resourcePath, FileManager.default.fileExists(atPath: res + "/vendor") {
+            env["PYTHONPATH"] = res + "/vendor"        // Pillow, bundled so nothing needs installing
+            env["PYTHONDONTWRITEBYTECODE"] = "1"       // leave the signed app untouched
+        }
+        p.environment = ProcessInfo.processInfo.environment.merging(env) { _, new in new }
         p.currentDirectoryURL = URL(fileURLWithPath: (script as NSString).deletingLastPathComponent)
         p.standardOutput = log
         p.standardError = log
@@ -218,7 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         menu.addItem(.separator())
 
         menu.addItem(item("Turn Lamps Off", #selector(togglePower), tag: .power))
-        menu.addItem(item("Spotify Solid", #selector(setPreset(_:)), tag: .solid))
+        menu.addItem(item("Solid", #selector(setPreset(_:)), tag: .solid))
         menu.addItem(item("Ambient Wave", #selector(setPreset(_:)), tag: .wave))
         menu.addItem(item("Two-Lamp Split", #selector(setPreset(_:)), tag: .duo))
         menu.addItem(item("7-Zone Fade", #selector(setPreset(_:)), tag: .seg))

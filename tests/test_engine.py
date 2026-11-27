@@ -634,6 +634,39 @@ class SlewLimitTest(unittest.TestCase):
         self.assertEqual(S._limit_slew((far, far), 20.0)[0][0], (250, 0, 0))   # after a long pause: no lag
 
 
+class ThemeSupportTest(unittest.TestCase):
+    def test_state_carries_what_the_designs_show(self):
+        S = engine.AppState()
+        S.save_config = lambda: None
+        d = S.to_dict()
+        for key in ("album", "source_name", "default_theme", "can_shuffle_repeat", "art_url", "palette_lamp", "flow", "player_pos"):
+            self.assertIn(key, d)
+        self.assertIn(d["default_theme"], ("classic", "a", "b", "c", "d"))
+
+    def test_source_names(self):
+        saved = (players._active, players._bundle)
+        try:
+            players._active, players._bundle = "spotify", ""
+            self.assertEqual(players.source_name(), "Spotify")
+            players._active = "music"
+            self.assertEqual(players.source_name(), "Apple Music")
+            players._active, players._bundle = "system", "com.google.Chrome"
+            self.assertEqual(players.source_name(), "Chrome")
+            players._bundle = "org.example.coolplayer"
+            self.assertEqual(players.source_name(), "Coolplayer")
+        finally:
+            players._active, players._bundle = saved
+
+    def test_theme_files_are_served_and_linked(self):
+        import web
+        for f in ("/themes.js", "/themes.css"):
+            self.assertIn(f, web.STATIC_FILES)
+            self.assertTrue(os.path.exists(os.path.join(web.WEB_DIR, f.lstrip("/"))))
+        html = open(os.path.join(web.WEB_DIR, "index.html")).read()
+        self.assertIn('src="/themes.js"', html)
+        self.assertIn('id="themeRoot"', html)
+
+
 class FakeRequest:
     """Just enough of an HTTP handler to test the access checks."""
     def __init__(self, handler_cls, client_ip="192.168.1.50", headers=None):
