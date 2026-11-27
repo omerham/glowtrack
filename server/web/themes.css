@@ -557,6 +557,9 @@ body.in-mac-app #themeRoot .tscroll { top: 28px; }
 .xdev i { width: 8px; height: 8px; border-radius: 50%; background: #777; flex: none; }
 .xdev i.on { background: #4ade80; }
 .xdev span { flex: 1; }
+.xdev { flex-wrap: wrap; row-gap: 6px; }
+.xdev .xname { flex: 1 1 140px; min-width: 0; width: auto; }
+.xdev .xside { width: auto; flex: none; }
 .design.A .xbtn.on { background: var(--ink); color: var(--pn); }
 .design.A .xbtn { box-shadow: 0 2px 0 var(--ink); }
 .A .xin option { color: #111; }

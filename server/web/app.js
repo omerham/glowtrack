@@ -911,6 +911,7 @@ function renderDevices(s) {
   if (!list) return;
   const sig = JSON.stringify([s.devices, s.discovered_devices, s.scanning_devices]);
   if (sig === lastDevSig) return;
+  if (list.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;   // don't rebuild while naming a light
   lastDevSig = sig;
   list.innerHTML = '';
   const scanBtn = document.getElementById('devScanBtn');
@@ -930,8 +931,34 @@ function renderDevices(s) {
     d.append(dotEl, t, b);
     list.appendChild(d);
   };
-  (s.devices || []).forEach(d => row(`${d.label} ${d.ip} · follows ${d.side}`, d.online ? '#34d399' : '#64748b',
-    'Remove', () => post('/api/devices/remove', { ip: d.ip })));
+  (s.devices || []).forEach(d => {
+    const r = document.createElement('div');
+    r.className = 'flex items-center gap-2 text-[11px] text-slate-300';
+    const dotEl = document.createElement('span');
+    dotEl.style.cssText = 'width:8px;height:8px;border-radius:50%;flex:none;background:' + (d.online ? '#34d399' : '#64748b');
+    dotEl.title = d.online ? 'Online' : 'Not answering';
+    const nameIn = document.createElement('input');
+    nameIn.type = 'text'; nameIn.maxLength = 24; nameIn.value = d.name || '';
+    nameIn.placeholder = d.label + ' ' + d.ip;
+    nameIn.setAttribute('aria-label', 'Name for ' + d.label + ' ' + d.ip);
+    nameIn.className = 'st-btn flex-1';
+    nameIn.style.cssText = 'min-width:0;text-align:left;background:rgba(255,255,255,.06)';
+    const save = () => { if (nameIn.value.trim() !== (d.name || '')) post('/api/devices/update', { ip: d.ip, name: nameIn.value }); };
+    nameIn.onchange = save;
+    nameIn.onkeydown = e => { if (e.key === 'Enter') nameIn.blur(); };
+    const sideSel = document.createElement('select');
+    sideSel.className = 'st-btn';
+    sideSel.style.background = 'rgba(255,255,255,.06)';
+    sideSel.setAttribute('aria-label', 'Which lamp ' + (d.name || d.label) + ' follows');
+    sideSel.innerHTML = '<option value="left">Follows left</option><option value="right">Follows right</option>';
+    sideSel.value = d.side;
+    sideSel.onchange = () => post('/api/devices/update', { ip: d.ip, side: sideSel.value });
+    const rm = document.createElement('button');
+    rm.className = 'st-btn'; rm.textContent = 'Remove';
+    rm.onclick = () => post('/api/devices/remove', { ip: d.ip });
+    r.append(dotEl, nameIn, sideSel, rm);
+    list.appendChild(r);
+  });
   (s.discovered_devices || []).forEach(d => row(`Found: ${d.kind.toUpperCase()} ${d.ip}`, '#fbbf24', 'Add',
     () => addDevice(d.kind, d.ip)));
   if (s.scanning_devices) devMsg('Looking for lights on your network…');

@@ -412,8 +412,16 @@
   function paintDevices(s) {
     var sig = JSON.stringify([s.devices, s.discovered_devices, s.scanning_devices]);
     q('[data-devlist]').forEach(function (h) {
-      if (h._sig === sig) return; h._sig = sig; var html = '';
-      (s.devices || []).forEach(function (d) { html += '<div class="xdev"><i class="' + (d.online ? 'on' : '') + '"></i><span>' + d.label + ' ' + d.ip + ', follows ' + d.side + '</span><button class="xbtn" data-act="rmdev" data-ip="' + d.ip + '">Remove</button></div>'; });
+      if (h._sig === sig) return;
+      if (h.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;   // don't rebuild while naming a light
+      h._sig = sig; var html = '';
+      (s.devices || []).forEach(function (d) {
+        var ph = esc(d.label + ' ' + d.ip).replace(/"/g, '&quot;');
+        html += '<div class="xdev"><i class="' + (d.online ? 'on' : '') + '" title="' + (d.online ? 'Online' : 'Not answering') + '"></i>' +
+          '<input class="xin xname" data-devname data-ip="' + d.ip + '" maxlength="24" value="' + esc(d.name || '').replace(/"/g, '&quot;') + '" placeholder="' + ph + '" aria-label="Name for ' + ph + '">' +
+          '<select class="xin xside" data-devside data-ip="' + d.ip + '" aria-label="Which lamp ' + ph + ' follows"><option value="left"' + (d.side === 'left' ? ' selected' : '') + '>Follows left</option><option value="right"' + (d.side === 'right' ? ' selected' : '') + '>Follows right</option></select>' +
+          '<button class="xbtn" data-act="rmdev" data-ip="' + d.ip + '">Remove</button></div>';
+      });
       (s.discovered_devices || []).forEach(function (d) { html += '<div class="xdev"><i></i><span>Found ' + d.kind.toUpperCase() + ' ' + d.ip + '</span><button class="xbtn" data-act="adddisc" data-kind="' + d.kind + '" data-ip="' + d.ip + '">Add</button></div>'; });
       if (s.scanning_devices) html += '<div class="xmsg">Looking for lights on your network...</div>';
       h.innerHTML = html;
@@ -620,6 +628,12 @@
     else if (t.hasAttribute('data-swv')) api('/api/swatch', { index: +t.getAttribute('data-swv') });
     else if (t.hasAttribute('data-lt')) seekTo(+t.getAttribute('data-lt') - 0.1);
   });
+  root.addEventListener('change', function (e) {     // rename a light, or move it to the other lamp
+    var t = e.target;
+    if (t.hasAttribute('data-devname')) api('/api/devices/update', { ip: t.getAttribute('data-ip'), name: t.value });
+    else if (t.hasAttribute('data-devside')) api('/api/devices/update', { ip: t.getAttribute('data-ip'), side: t.value });
+  });
+  root.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.hasAttribute && e.target.hasAttribute('data-devname')) e.target.blur(); });
   root.addEventListener('input', function (e) {
     var t = e.target;
     if (t.hasAttribute('data-range')) sendBright(+t.value);

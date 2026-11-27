@@ -98,7 +98,7 @@ class AppState:
         # Other brands (WiZ / LIFX / WLED) saved from earlier runs
         for d in cfg.get("devices") or []:
             try:
-                self.govee.devices.append(devices.make_device(d.get("kind"), d.get("ip"), d.get("side", "left")))
+                self.govee.devices.append(devices.make_device(d.get("kind"), d.get("ip"), d.get("side", "left"), d.get("name", "")))
             except (ValueError, AttributeError):
                 pass
         self.discovered = []       # lights found by the last scan, not added yet
@@ -351,17 +351,32 @@ class AppState:
     # ------------------------------------------------------------------
     # Other lights (WiZ / LIFX / WLED)
     # ------------------------------------------------------------------
-    def add_device(self, kind, ip, side):
+    def add_device(self, kind, ip, side, name=""):
         ip = str(ip or "").strip()
         if any(d.ip == ip for d in self.govee.devices):
             raise ValueError("that light is already added")
-        dev = devices.make_device(kind, ip, side)
+        dev = devices.make_device(kind, ip, side, name)
         self.govee.devices.append(dev)
         self.discovered = [f for f in self.discovered if f["ip"] != ip]
         threading.Thread(target=dev.ping, daemon=True).start()
         self.save_config()
         self.out_frame = None
         self.request_update(0)
+        self.broadcast()
+
+    def update_device(self, ip, name=None, side=None):
+        """Renames a light and/or moves it to follow the other lamp."""
+        dev = next((d for d in self.govee.devices if d.ip == ip), None)
+        if dev is None:
+            raise ValueError("that light is not added")
+        if name is not None:
+            dev.name = devices.clean_name(name)
+        if side in ("left", "right") and side != dev.side:
+            dev.side = side
+            dev.forget_sent()
+            self.out_frame = None
+            self.request_update(0)
+        self.save_config()
         self.broadcast()
 
     def remove_device(self, ip):

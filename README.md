@@ -129,7 +129,8 @@ archive/           old versions, kept for reference (not used)
 
 Besides your Govee lamps, Glowtrack can drive **WiZ**, **LIFX** and **WLED** lights over your local
 network. Open **Settings → Other lights**, press *Scan* (WiZ and LIFX are found automatically;
-for a WLED strip type its IP address), and choose whether each light follows the left or right lamp.
+for a WLED strip type its IP address), then give each light a name you will recognise and choose whether it
+follows the left or right lamp (you can change both at any time).
 Single-colour lights show the average of that lamp's colours; a WLED strip spreads the lamp's 7 zones
 along its length (turn on WLED's realtime/UDP listening, which is the default).
 

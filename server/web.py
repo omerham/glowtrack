@@ -498,7 +498,14 @@ class GoveeHttpHandler(BaseHTTPRequestHandler):
 
         if path == "/api/devices/add":
             try:
-                S.add_device(body.get("kind"), body.get("ip"), body.get("side", "left"))
+                S.add_device(body.get("kind"), body.get("ip"), body.get("side", "left"), body.get("name", ""))
+            except ValueError as e:
+                raise BadRequest(str(e))
+            return ok
+
+        if path == "/api/devices/update":
+            try:
+                S.update_device(str(body.get("ip", "")), body.get("name"), body.get("side"))
             except ValueError as e:
                 raise BadRequest(str(e))
             return ok

@@ -37,14 +37,21 @@ def scale(c, factor):
     return tuple(max(0, min(255, int(round(v * factor)))) for v in c)
 
 
+def clean_name(name):
+    """A name the owner gave a light: plain text, one line, at most 24 characters."""
+    text = "".join(ch for ch in str(name or "") if ch.isprintable())
+    return " ".join(text.split())[:24]
+
+
 class Device:
     kind = "device"
     label = "Light"
     min_interval = 0.08         # seconds between updates
 
-    def __init__(self, ip, side="left"):
+    def __init__(self, ip, side="left", name=""):
         self.ip = ip
         self.side = side if side in ("left", "right") else "left"
+        self.name = clean_name(name)
         self.last_seen = 0.0
         self._last = None       # what was last sent
         self._sent_at = 0.0
@@ -92,10 +99,10 @@ class Device:
         return (time.time() - self.last_seen) < window
 
     def to_config(self):
-        return {"kind": self.kind, "ip": self.ip, "side": self.side}
+        return {"kind": self.kind, "ip": self.ip, "side": self.side, "name": self.name}
 
     def to_dict(self):
-        return {"kind": self.kind, "label": self.label, "ip": self.ip, "side": self.side, "online": self.is_online()}
+        return {"kind": self.kind, "label": self.label, "name": self.name, "ip": self.ip, "side": self.side, "online": self.is_online()}
 
     def _request(self, payload, port, timeout=0.6):
         """Sends one UDP packet and waits briefly for an answer (None if there is none)."""
@@ -197,8 +204,8 @@ class LifxLight(Device):
     PORT = 56700
     min_interval = 0.06
 
-    def __init__(self, ip, side="left"):
-        super().__init__(ip, side)
+    def __init__(self, ip, side="left", name=""):
+        super().__init__(ip, side, name)
         self._seq = 0
 
     def _send_colours(self, colours, persistent):
@@ -255,8 +262,8 @@ class WledStrip(Device):
     MAX_LEDS = 490            # most LEDs one DRGB packet can carry
     min_interval = 0.04
 
-    def __init__(self, ip, side="left"):
-        super().__init__(ip, side)
+    def __init__(self, ip, side="left", name=""):
+        super().__init__(ip, side, name)
         self.led_count = 30
 
     def shape(self, segs):
@@ -314,13 +321,13 @@ KINDS = {cls.kind: cls for cls in (WizLight, LifxLight, WledStrip)}
 DISCOVERABLE = (WizLight, LifxLight)
 
 
-def make_device(kind, ip, side="left"):
+def make_device(kind, ip, side="left", name=""):
     """Builds a device, or raises ValueError for a bad kind / address."""
     if kind not in KINDS:
         raise ValueError("unknown device type")
     if not is_lan_ip(ip):
         raise ValueError("that isn't an address on your local network")
-    return KINDS[kind](ip, side)
+    return KINDS[kind](ip, side, name)
 
 
 def discover_all():

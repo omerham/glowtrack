@@ -911,6 +911,33 @@ class OtherDevicesTest(unittest.TestCase):
         self.assertEqual(S.to_dict()["devices"], [])
 
 
+    def test_lights_can_be_named_and_moved(self):
+        import devices
+        S = engine.AppState()
+        saved = []
+        S.save_config = lambda: saved.append(1)
+        S.add_device("wiz", "192.168.1.60", "left", "  Desk   lamp  ")
+        self.assertEqual(S.to_dict()["devices"][0]["name"], "Desk lamp")        # tidied
+        S.update_device("192.168.1.60", name="Reading nook", side="right")
+        d = S.to_dict()["devices"][0]
+        self.assertEqual((d["name"], d["side"]), ("Reading nook", "right"))
+        self.assertEqual(S.govee.devices[0].to_config()["name"], "Reading nook")  # saved to the config
+        self.assertTrue(saved)
+        S.update_device("192.168.1.60", name="")                                   # clearing goes back to "WiZ <ip>"
+        self.assertEqual(S.to_dict()["devices"][0]["name"], "")
+        self.assertEqual(devices.clean_name("x" * 60), "x" * 24)
+        self.assertEqual(devices.clean_name("a\x00b\nc"), "abc")
+        with self.assertRaises(ValueError):
+            S.update_device("192.168.1.99", name="nope")
+        S.remove_device("192.168.1.60")
+
+    def test_names_survive_a_restart(self):
+        import devices
+        dev = devices.make_device("lifx", "192.168.1.61", "right", "Beam")
+        again = devices.make_device(dev.to_config()["kind"], dev.to_config()["ip"], dev.to_config()["side"], dev.to_config()["name"])
+        self.assertEqual((again.name, again.side), ("Beam", "right"))
+
+
 class ReportProblemTest(unittest.TestCase):
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
