@@ -341,6 +341,16 @@ class GoveeController:
                 except Exception:
                     pass
 
+    def release(self):
+        """Hands the lamps back: a plain warm-white colour command, which ends the zone-by-zone control Glowtrack
+        used, so the Govee app (and the lamps' own buttons) work normally again. Lamps that are off stay off."""
+        if not self.is_powered_on:
+            return
+        for _ in range(2):                       # UDP can drop a packet; the second one costs nothing
+            self.send_cmd({"msg": {"cmd": "colorwc", "data": {
+                "color": {"r": 0, "g": 0, "b": 0}, "colorTemInKelvin": 3500}}})
+            time.sleep(0.12)
+
     def set_power(self, on_off):
         self.is_powered_on = bool(on_off)
         self.send_cmd({"msg": {"cmd": "turn", "data": {"value": 1 if on_off else 0}}})

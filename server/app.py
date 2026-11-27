@@ -85,6 +85,10 @@ def exit_when_orphaned():
         time.sleep(5)
         if os.getppid() == 1:
             print("[*] The app that started the server has gone - stopping")
+            try:
+                web.STATE.release_lamps()        # best effort: hand the lamps back before going
+            except Exception:
+                pass
             os._exit(0)
 
 

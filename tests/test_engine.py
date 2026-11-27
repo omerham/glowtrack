@@ -938,6 +938,53 @@ class OtherDevicesTest(unittest.TestCase):
         self.assertEqual((again.name, again.side), ("Beam", "right"))
 
 
+class ReleaseLampsTest(unittest.TestCase):
+    def _controller(self, powered=True):
+        import lamps
+        c = lamps.GoveeController(["192.168.1.2"])
+        c.is_powered_on = powered
+        sent = []
+        c.send_cmd = lambda msg, ips=None: sent.append(msg["msg"])
+        return c, sent
+
+    def test_release_hands_lamps_back_with_a_plain_colour_command(self):
+        c, sent = self._controller(powered=True)
+        c.release()
+        self.assertTrue(sent)
+        for m in sent:
+            self.assertEqual(m["cmd"], "colorwc")                       # ends zone-by-zone control
+            self.assertEqual(m["data"]["colorTemInKelvin"], 3500)       # an ordinary warm white
+            self.assertNotEqual(m["cmd"], "ptReal")
+
+    def test_lamps_that_were_turned_off_stay_off(self):
+        c, sent = self._controller(powered=False)
+        c.release()
+        self.assertEqual(sent, [])
+
+    def test_release_stops_the_engine_and_is_safe_twice(self):
+        S = engine.AppState()
+        calls = []
+        S.govee.release = lambda: calls.append(1)
+        S.release_lamps()
+        S.release_lamps()
+        self.assertTrue(S.engine_paused)
+        self.assertEqual(len(calls), 2)
+
+    def test_release_command_only_from_this_mac(self):
+        import web
+        src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server", "web.py")).read()
+        i = src.index('if path == "/api/release":')
+        self.assertIn("_is_local_client()", src[i:i + 200])
+
+    def test_app_releases_the_lamps_before_it_quits(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        swift = open(os.path.join(root, "mac", "main.swift")).read()
+        i = swift.index("func applicationWillTerminate")
+        body = swift[i:i + 300]
+        self.assertLess(body.index("releaseLamps()"), body.index("server?.terminate()"))   # before the server is stopped
+        self.assertIn("api/release", swift)
+
+
 class WebFilesTest(unittest.TestCase):
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

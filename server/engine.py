@@ -512,6 +512,17 @@ class AppState:
 
         self.govee.flash(rgb, times, on_start=_start, on_done=_done)
 
+    def release_lamps(self):
+        """Stops driving the lamps and returns them to normal, so they can be changed from the Govee app again.
+        Called when Glowtrack quits or is shut down; safe to call more than once."""
+        self.engine_paused = True                # no more frames from the lighting engine
+        time.sleep(0.2)                          # let a frame that is already on its way finish first
+        try:
+            self.govee.release()
+            print("[*] Lamps released to normal")
+        except Exception as e:
+            print(f"[!] Could not release the lamps: {e}")
+
     def connect_and_start(self):
         self.set_power(True)
         spotify_connect_and_play()

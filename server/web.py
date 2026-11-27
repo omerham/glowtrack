@@ -333,6 +333,12 @@ class GoveeHttpHandler(BaseHTTPRequestHandler):
             threading.Thread(target=S.connect_and_start, daemon=True).start()
             return {"status": "connected"}
 
+        if path == "/api/release":
+            if not self._is_local_client():
+                raise BadRequest("this command only works from this Mac")
+            S.release_lamps()                    # the menu-bar app calls this just before it quits
+            return ok
+
         if path == "/api/shutdown":
             # Stop the server (e.g. from a phone). Exit code SHUTDOWN_EXIT_CODE tells
             # the menu-bar app this was on purpose, so it quits instead of restarting.
@@ -342,6 +348,8 @@ class GoveeHttpHandler(BaseHTTPRequestHandler):
                 if lamps_off:
                     S.set_power(False)
                     time.sleep(0.3)
+                else:
+                    S.release_lamps()            # leave them on, but under the Govee app's control again
                 print("[*] Shut down from the dashboard")
                 os._exit(SHUTDOWN_EXIT_CODE)
             threading.Thread(target=_stop, daemon=True).start()

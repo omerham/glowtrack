@@ -71,7 +71,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func applicationWillTerminate(_ note: Notification) {
         quitting = true
+        releaseLamps()          // hand the lamps back to the Govee app before the server goes
         server?.terminate()
+    }
+
+    /// Asks the server to return the lamps to normal and waits (briefly) for it, so quitting never leaves
+    /// them stuck on Glowtrack's last colours.
+    private func releaseLamps() {
+        var req = URLRequest(url: serverURL.appendingPathComponent("api/release"))
+        req.httpMethod = "POST"
+        req.setValue("1", forHTTPHeaderField: "X-Govee-App")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = Data("{}".utf8)
+        req.timeoutInterval = 2
+        let done = DispatchSemaphore(value: 0)
+        URLSession.shared.dataTask(with: req) { _, _, _ in done.signal() }.resume()
+        _ = done.wait(timeout: .now() + 2.5)
     }
 
     private func launchedAtLogin() -> Bool {
