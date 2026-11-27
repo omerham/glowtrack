@@ -46,7 +46,7 @@
 .A .knob { position: relative; width: 112px; height: 112px; flex: none; cursor: grab; touch-action: none; }
 .A .knob svg { width: 100%; height: 100%; }
 .A .bpm { margin-top: 2px; }
-.A .bpm b { display: block; font: 500 54px/1 "DM Mono", monospace; letter-spacing: -.02em; }
+.A .bpm b { display: block; font: 700 54px/1 "Archivo", sans-serif; font-stretch: 78%; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .A .sw { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
 .A .sw .trk { position: relative; width: 38px; height: 18px; border: 1px solid var(--ink); }
 .A .sw .trk::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; background: var(--ink); transition: transform .15s; }
@@ -129,7 +129,7 @@
 .D .lampw { -webkit-mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) 18px, #000 72px); mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) 18px, #000 72px); }
 .D .lampw i { height: 46px; background: var(--c); box-shadow: 0 0 40px 10px var(--c); }
 .D .lampw.l { left: 27%; } .D .lampw.r { left: 73%; }
-.D .frame { position: absolute; left: 50%; top: 124px; width: 250px; height: 250px; transform: translateX(-50%); padding: 12px; background: #0b0b0d; box-shadow: 0 0 0 1px rgba(255,255,255,.18); }
+.D .frame { position: absolute; left: 50%; top: 108px; width: 364px; height: 364px; transform: translateX(-50%); padding: 12px; background: #0b0b0d; box-shadow: 0 0 0 1px rgba(255,255,255,.18); }
 .D .frame div { width: 100%; height: 100%; background-image: var(--cov); background-size: cover; }
 .D .credit { position: absolute; left: 36px; top: 34px; }
 .D .credit .k { font: 500 11px "DM Mono", monospace; letter-spacing: .12em; text-transform: uppercase; opacity: .6; margin-bottom: 8px; }
@@ -169,8 +169,8 @@
 .A.fs .big { font: 800 64px/.94 "Archivo", sans-serif; font-stretch: 78%; text-transform: uppercase; margin: 0 0 10px; }
 .A.fs.ly .big { font-size: 30px; }
 .A.fs .art2 { opacity: .8; margin-bottom: 22px; }
-.A.fs .tmr { font: 500 88px/1 "DM Mono", monospace; letter-spacing: -.03em; text-transform: none; }
-.A.fs .tmr small { font-size: 16px; letter-spacing: .06em; opacity: .6; margin-left: 12px; }
+.A.fs .tmr { font: 700 88px/1 "Archivo", sans-serif; font-stretch: 78%; font-variant-numeric: tabular-nums; letter-spacing: .01em; text-transform: none; }   /* not the mono font: its zero has a slash through it, which read as stray lines beside the time */
+.A.fs .tmr small { font: 500 16px "DM Mono", monospace; letter-spacing: .06em; opacity: .6; margin-left: 12px; }
 .A.fs.ly .tmr { font-size: 30px; }
 .A.fs .lb { position: absolute; display: flex; gap: 26px; }
 .A.fs.ly .lb { display: none; }
@@ -274,6 +274,8 @@
 .D.fs .credit h3 { width: 100%; font-size: 30px; }
 .D.fs.ly .credit { left: 24%; top: 410px; width: 340px; }
 .D.fs .lyr { left: 40%; right: 12%; top: 90px; bottom: 120px; font: 700 30px/1.35 "Syne", sans-serif; }
+/* with lyrics the column sits clear of the framed cover (48px gap) and is centred against the cover and title, not stuck to the top */
+.D.fs.ly .lyr { left: 46%; right: 6%; top: 86px; bottom: 112px; display: flex; flex-direction: column; justify-content: center; }
 .D.fs .lyr .l { opacity: .28; }
 .D.fs .lyr .l.cur { opacity: 1; }
 .D.fs .mini { position: absolute; left: 50%; transform: translateX(-50%); bottom: 26px; display: flex; align-items: center; gap: 18px; font: 500 11px "DM Mono", monospace; letter-spacing: .08em; text-transform: uppercase; }
@@ -681,8 +683,8 @@ body.in-mac-app #themeRoot .tscroll { top: 28px; }
 .C.fs .ar { max-width: 360px; }
 .C.fs.ly .ar { max-width: 260px; }
 .C.ph .ar { max-width: 296px; }
-.D .credit h3 { width: 330px; }
-.D .credit p { max-width: 330px; }
+.D .credit h3 { width: 270px; }       /* the larger cover starts at x=318; the title stays left of it */
+.D .credit p { max-width: 270px; }
 .D.fs .credit h3 { width: 100%; }
 .D.fs .credit p { max-width: 500px; margin: 0 auto; }
 .D.fs.ly .credit p { max-width: 340px; }
