@@ -126,6 +126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         if let res = Bundle.main.resourcePath, FileManager.default.fileExists(atPath: res + "/vendor") {
             env["PYTHONPATH"] = res + "/vendor"        // Pillow, bundled so nothing needs installing
             env["PYTHONDONTWRITEBYTECODE"] = "1"       // leave the signed app untouched
+            env["GOVEE_RELOAD"] = "0"                  // the self-contained app never changes under itself: no file watching
         }
         p.environment = ProcessInfo.processInfo.environment.merging(env) { _, new in new }
         p.currentDirectoryURL = URL(fileURLWithPath: (script as NSString).deletingLastPathComponent)

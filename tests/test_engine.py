@@ -938,6 +938,65 @@ class OtherDevicesTest(unittest.TestCase):
         self.assertEqual((again.name, again.side), ("Beam", "right"))
 
 
+class WebFilesTest(unittest.TestCase):
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def test_static_files_are_compressed_and_revalidated(self):
+        import gzip
+        import tempfile
+        import web
+        d = tempfile.mkdtemp()
+        old_dir, old_files = web.WEB_DIR, dict(web.STATIC_FILES)
+        try:
+            web.WEB_DIR = d
+            web.STATIC_FILES["/t.js"] = "application/javascript; charset=utf-8"
+            web.STATIC_FILES["/t.png"] = "image/png"
+            body = b"function hello() { return 'hello world'; }\n" * 100
+            open(os.path.join(d, "t.js"), "wb").write(body)
+            open(os.path.join(d, "t.png"), "wb").write(b"\x89PNG" + b"\x00" * 2000)
+            version, raw, gz, etag = web._static_entry("/t.js")
+            self.assertEqual(raw, body)
+            self.assertEqual(gzip.decompress(gz), body)
+            self.assertLess(len(gz), len(body) / 5)
+            self.assertEqual(web._static_entry("/t.js")[3], etag)           # unchanged file: same ETag
+            self.assertIsNone(web._static_entry("/t.png")[2])                # pictures are not recompressed
+            time.sleep(0.01)
+            open(os.path.join(d, "t.js"), "wb").write(body + b"// edited\n")   # an edit shows on the next request
+            self.assertNotEqual(web._static_entry("/t.js")[3], etag)
+            self.assertIn(b"// edited", web._static_entry("/t.js")[1])
+        finally:
+            web.WEB_DIR = old_dir
+            web.STATIC_FILES.clear()
+            web.STATIC_FILES.update(old_files)
+            web._STATIC_CACHE.clear()
+
+    def test_fonts_are_bundled_and_the_page_asks_no_other_website(self):
+        import re
+        import web
+        css = open(os.path.join(web.WEB_DIR, "fonts.css")).read()
+        urls = re.findall(r"url\((/fonts/[^)]+)\)", css)
+        self.assertGreaterEqual(len(urls), 9)
+        for u in urls:
+            self.assertIn(u, web.STATIC_FILES, u)                            # served
+            self.assertTrue(os.path.exists(os.path.join(web.WEB_DIR, u.lstrip("/"))), u)
+        self.assertIn("/fonts.css", web.STATIC_FILES)
+        self.assertFalse([k for k in web.STATIC_FILES if "licenses" in k])    # licence texts are not served
+        for name in ("index.html", "app.js", "themes.js", "themes.css", "app.css"):
+            text = open(os.path.join(web.WEB_DIR, name)).read()
+            self.assertNotIn("fonts.googleapis", text, name)
+            self.assertNotIn("fonts.gstatic", text, name)
+        self.assertIn('href="/fonts.css"', open(os.path.join(web.WEB_DIR, "index.html")).read())
+        for fam in os.listdir(os.path.join(web.WEB_DIR, "fonts", "licenses")):
+            self.assertIn("SIL OPEN FONT LICENSE", open(os.path.join(web.WEB_DIR, "fonts", "licenses", fam)).read())
+
+    def test_shipped_app_does_not_watch_its_own_files(self):
+        app = open(os.path.join(self.ROOT, "server", "app.py")).read()
+        self.assertIn('os.environ.get("GOVEE_RELOAD", "1") != "0"', app)
+        swift = open(os.path.join(self.ROOT, "mac", "main.swift")).read()
+        i = swift.index('env["PYTHONPATH"]')
+        self.assertIn('env["GOVEE_RELOAD"] = "0"', swift[i:i + 400])         # only the self-contained app (it has vendor/)
+
+
 class ConfigSaveTest(unittest.TestCase):
     def test_many_threads_saving_at_once_never_lose_the_file(self):
         import json

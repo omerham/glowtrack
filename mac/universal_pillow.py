@@ -36,6 +36,45 @@ def fetch(arch):
     return zipfile.ZipFile(io.BytesIO(data))
 
 
+# Parts of Pillow the app never uses: it only opens an album cover, converts it to RGB and shrinks it.
+# Dropping them (and the libraries only they need) halves the size of every download.
+# AVIF pictures, drawing text with fonts, and colour-profile conversion are the three.
+UNUSED_MODULES = ("_avif", "_imagingft", "_imagingcms", "_imagingtk")
+
+
+def deps(path, arch):
+    out = subprocess.run(["otool", "-arch", arch, "-L", path], capture_output=True, text=True).stdout.splitlines()[1:]
+    return [os.path.basename(line.split()[0]) for line in out if line.strip() and not line.split()[0].startswith("/usr/lib/")
+            and not line.split()[0].startswith("/System/")]
+
+
+def prune(pil_dir):
+    """Removes the unused extension modules, then every bundled library nothing reachable still needs."""
+    removed = 0
+    for name in os.listdir(pil_dir):
+        if any(name.startswith(m + ".") for m in UNUSED_MODULES):
+            os.remove(os.path.join(pil_dir, name))
+            removed += 1
+    libs = os.path.join(pil_dir, ".dylibs")
+    have = set(os.listdir(libs)) if os.path.isdir(libs) else set()
+    needed, todo = set(), [os.path.join(pil_dir, n) for n in os.listdir(pil_dir) if n.endswith(".so")]
+    while todo:
+        path = todo.pop()
+        for arch in ("arm64", "x86_64"):
+            for dep in deps(path, arch):
+                if dep in have and dep not in needed:
+                    needed.add(dep)
+                    todo.append(os.path.join(libs, dep))
+    for name in have - needed:
+        os.remove(os.path.join(libs, name))
+        removed += 1
+    for folder, _dirs, files in os.walk(pil_dir):                 # type stubs are only for editors
+        for name in files:
+            if name.endswith(".pyi") or name == "py.typed":
+                os.remove(os.path.join(folder, name))
+    return removed
+
+
 def is_macho(path):
     with open(path, "rb") as f:
         return f.read(4) in (b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe")
@@ -79,7 +118,8 @@ def main():
                 if ".dylibs" in src and not os.path.exists(dest):
                     os.makedirs(os.path.dirname(dest), exist_ok=True)
                     shutil.copy2(src, dest)
-        print(f"universal Pillow ready: {joined} compiled files joined, in {os.path.join(out, 'PIL')}")
+        gone = prune(os.path.join(out, "PIL"))
+        print(f"universal Pillow ready: {joined} compiled files joined, {gone} unused files removed, in {os.path.join(out, 'PIL')}")
     finally:
         shutil.rmtree(work, ignore_errors=True)
 

@@ -1,4 +1,5 @@
 """Local web server: serves the dashboard and handles its commands."""
+import gzip
 import hmac
 import json
 import math
@@ -81,7 +82,33 @@ STATIC_FILES = {
     "/favicon-32.png": "image/png",
     "/favicon.ico": "image/x-icon",
     "/favicon.svg": "image/svg+xml",
+    "/fonts.css": "text/css; charset=utf-8",
 }
+# the dashboard's fonts, stored in web/fonts so the page never asks another website for them
+_FONT_DIR = os.path.join(WEB_DIR, "fonts")
+if os.path.isdir(_FONT_DIR):
+    for _name in os.listdir(_FONT_DIR):
+        if _name.endswith(".woff2"):
+            STATIC_FILES["/fonts/" + _name] = "font/woff2"
+
+
+_STATIC_CACHE = {}
+_COMPRESSIBLE = ("text/", "application/javascript", "application/manifest+json", "image/svg+xml", "image/x-icon")
+
+
+def _static_entry(path):
+    """(version, bytes, gzip bytes or None, etag) for a dashboard file, re-read only when the file changed."""
+    full = os.path.join(WEB_DIR, path.lstrip("/"))
+    st = os.stat(full)
+    version = (st.st_mtime_ns, st.st_size)
+    entry = _STATIC_CACHE.get(path)
+    if entry is None or entry[0] != version:
+        with open(full, "rb") as f:
+            raw = f.read()
+        gz = gzip.compress(raw, 6, mtime=0) if len(raw) > 600 and STATIC_FILES[path].startswith(_COMPRESSIBLE) else None
+        entry = (version, raw, gz, '"%x-%x"' % version)
+        _STATIC_CACHE[path] = entry
+    return entry
 
 
 class GoveeHttpHandler(BaseHTTPRequestHandler):
@@ -99,6 +126,33 @@ class GoveeHttpHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
+
+    def _send_static(self, path):
+        """A dashboard file. It is checked against the file on disk on every request (so an edit shows on the
+        next reload), but sent only when it changed (ETag, answered with 304 otherwise) and compressed
+        when the browser accepts it. Saves phones and tablets re-downloading about 300 KB on every visit."""
+        try:
+            entry = _static_entry(path)
+        except OSError:
+            self._send(404, {"error": "not found"})
+            return
+        ctype, raw, gz, etag = STATIC_FILES[path], entry[1], entry[2], entry[3]
+        self.send_response(304 if self.headers.get("If-None-Match") == etag else 200)
+        self.send_header("ETag", etag)
+        self.send_header("Cache-Control", "no-cache")           # keep it, but ask each time whether it changed
+        self.send_header("Vary", "Accept-Encoding")
+        if self.headers.get("If-None-Match") == etag:
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        body = raw
+        if gz is not None and "gzip" in (self.headers.get("Accept-Encoding") or ""):
+            body = gz
+            self.send_header("Content-Encoding", "gzip")
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def _host_ok(self):
         """Blocks DNS-rebinding (a random website pretending to be this Mac).
@@ -181,12 +235,7 @@ class GoveeHttpHandler(BaseHTTPRequestHandler):
         if path in ("/", "/index.html"):
             path = "/index.html"
         if path in STATIC_FILES:
-            # Read fresh from disk each time, so dashboard edits show on reload
-            try:
-                with open(os.path.join(WEB_DIR, path.lstrip("/")), "rb") as f:
-                    self._send(200, f.read(), STATIC_FILES[path])
-            except OSError:
-                self._send(404, {"error": "not found"})
+            self._send_static(path)
         elif path == "/api/lyrics":
             # Lyrics for whatever is playing now (looked up once per song)
             if STATE.is_ad:
