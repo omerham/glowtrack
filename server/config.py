@@ -3,7 +3,7 @@ import json
 import os
 import secrets
 
-VERSION = "3.1.3"               # keep in step with mac/Info.plist
+VERSION = "3.1.4"               # keep in step with mac/Info.plist
 ISSUES_URL = "https://github.com/omerham/glowtrack/issues/new"
 
 # Lamps are found automatically on the local network (and remembered in the
