@@ -1,0 +1,66 @@
+name: Report a problem
+description: Something does not work, looks wrong, or the lamps do not do what you expect.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying Glowtrack. A few details make a problem much quicker to fix.
+        The **Report a problem** link in Settings (and in the menu bar) opens this form with the version and design already filled in.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead. A screenshot helps for anything on screen.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Glowtrack version and design
+      description: Shown in Settings. For example "3.1.2, design B".
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: Mac, macOS version and chip
+      placeholder: MacBook Air, macOS 15.1, Apple M2
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it go wrong?
+      options:
+        - Lamps do not respond or are not found
+        - Colours or brightness look wrong
+        - Beat pulse or dynamic energy
+        - Song, cover art or lyrics on screen
+        - Play, pause, skip or volume controls
+        - One of the designs (layout, text, buttons)
+        - Phone or tablet
+        - Installing or opening the app
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: player
+    attributes:
+      label: What was playing, and in which app?
+      placeholder: Spotify, Apple Music, YouTube in Safari, ...
+  - type: input
+    id: lamps
+    attributes:
+      label: Your lights
+      description: Model names. Do not paste IP addresses.
+      placeholder: 2x Govee H6076
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (optional, but very useful)
+      description: |
+        The last 30 lines of `~/Library/Logs/GoveeSpotifySync.log`. In Terminal:
+        `tail -n 30 ~/Library/Logs/GoveeSpotifySync.log`
+        Remove anything personal before pasting.
+      render: text

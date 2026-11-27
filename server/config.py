@@ -3,6 +3,9 @@ import json
 import os
 import secrets
 
+VERSION = "3.1.2"               # keep in step with mac/Info.plist
+ISSUES_URL = "https://github.com/omerham/glowtrack/issues/new"
+
 # Lamps are found automatically on the local network (and remembered in the
 # config file). Add IPs here only to force specific lamps.
 TARGET_IPS = []

@@ -8,7 +8,7 @@ import zlib
 
 from colors import (blend_colours, build_7_zone_palette, extract_spotify_palette, flow_gradient,
                     get_dual_split_colors, led_finish, lift_frame, sample_palette_continuous)
-from config import AD_WHITE, DEFAULT_THEME, STARTUP_PALETTE, TARGET_IPS, clamp, load_config, save_config
+from config import AD_WHITE, DEFAULT_THEME, STARTUP_PALETTE, TARGET_IPS, VERSION, clamp, load_config, save_config
 import devices
 from lamps import GoveeController
 import players
@@ -745,6 +745,7 @@ class AppState:
             "flow_speed": self.flow_speed,
             "trans_speed": self.trans_speed,
             "vibrancy": self.vibrancy,
+            "version": VERSION,
             "music_pulse": self.music_pulse_enabled,
             "current_bpm": self.current_bpm,
             "detected_bpm": self.detected_bpm,

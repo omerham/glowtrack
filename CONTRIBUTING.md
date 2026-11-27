@@ -26,8 +26,10 @@ are read fresh on each page load. The menu-bar app is in `mac/` (`mac/build.sh`)
 
 ## Reporting problems
 
-Please include your macOS version, the player you used (Spotify, Apple Music, a browser...)
-and the last lines of `~/Library/Logs/GoveeSpotifySync.log`.
+Use **Report a problem** in Settings (or the menu bar icon): it opens the GitHub form with your version
+and design already filled in. Please add your macOS version, the player you used (Spotify, Apple Music,
+a browser...) and the last lines of `~/Library/Logs/GoveeSpotifySync.log`. Tried WiZ, LIFX or WLED? There is
+a short test-report form for that too, and "it just worked" is a useful report.
 
 Security issues (e.g. a way to control someone's lamps from another device): please report
 privately to the maintainer rather than in a public issue.

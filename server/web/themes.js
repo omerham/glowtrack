@@ -21,7 +21,7 @@
     ['Lamps', [['btns', 'lampbtns', [['swap', 'Swap left / right'], ['flip', 'Flip top / bottom'], ['rescan', 'Rescan'], ['blinkL', 'Blink left'], ['blinkR', 'Blink right']]], ['seg', 'preview', 'Lamp preview', [['smooth', 'Smooth'], ['low', 'Low power'], ['off', 'Minimal']]]]],
     ['Other lights', [['form']]],
     ['Phone and tablet', [['link']]],
-    ['Server', [['danger', 'Shut down']]]
+    ['App', [['btns', 'helpbtns', [['report', 'Report a problem']]], ['danger', 'Shut down']]]
   ];
   var ICON = {
     prev: '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 2h2v12H3zM14 2v12L6 8z" fill="currentColor"/></svg>',
@@ -161,9 +161,10 @@
     form: function () { return '<div class="xblk"><div class="xl">WiZ, LIFX and WLED lights (experimental)</div><div class="xrow" data-devlist></div><div class="xrow"><select class="xin" id="tdKind"><option value="wiz">WiZ</option><option value="lifx">LIFX</option><option value="wled">WLED strip</option></select><input class="xin" id="tdIp" placeholder="192.168.1.x"><select class="xin" id="tdSide"><option value="left">Follows left</option><option value="right">Follows right</option></select><button class="xbtn" data-act="adddev">Add</button><button class="xbtn" data-act="scandev">Scan</button></div><div class="xmsg" data-b="devmsg"></div></div>'; },
     link: function () { return '<div class="xblk"><div class="xl">Open this link once on each phone or tablet (same Wi-Fi). Keep it private.</div><div class="xrow"><input class="xin xwide" readonly data-pairlink><button class="xbtn" data-act="copylink">Copy</button></div></div>'; }
   };
+  ['c', 'd'].forEach(function (d) { PRIM[d].danger = function () { return ''; }; });   // C and D keep Shut down in the header
   ['a', 'b', 'c', 'd'].forEach(function (d) { Object.keys(EXTRA).forEach(function (k) { PRIM[d][k] = EXTRA[k]; }); });
   function allGroups(d, ids) { return ids.map(function (i) { return groupHtml(d, i); }).join(''); }
-  var ALL = [0, 1, 2, 3, 4, 5, 6, 7, 8], NOSRV = [0, 1, 2, 3, 4, 5, 6, 7];
+  var ALL = [0, 1, 2, 3, 4, 5, 6, 7, 8], NOSRV = ALL;
   var ST = {
     a: function () { return '<div class="design A st"><div class="hd"><div class="mark">GLOWTRACK</div><div class="meta">Settings &nbsp;/&nbsp; changes save automatically</div><button class="pwr" data-open="back">Done</button></div><div class="cols"><section class="mod">' + allGroups('a', [0, 1, 2]) + '</section><section class="mod">' + allGroups('a', [3, 4, 5]) + '</section><section class="mod">' + allGroups('a', [6, 7, 8]) + '</section></div></div>'; },
     b: function () { return '<div class="design B st"><div class="h1 dot">SETTINGS</div><button class="btn" data-open="back" style="position:absolute;right:36px;top:34px">Done</button><div class="col c1">' + allGroups('b', [0, 1, 2, 3]) + '</div><div class="col c2">' + allGroups('b', [4, 5, 6, 7, 8]) + '</div></div>'; },
@@ -582,6 +583,7 @@
       case 'adddisc': api('/api/devices/add', { kind: el.getAttribute('data-kind'), ip: el.getAttribute('data-ip'), side: 'left' }); break;
       case 'rmdev': api('/api/devices/remove', { ip: el.getAttribute('data-ip') }); break;
       case 'copylink': { var inp = root.querySelector('[data-pairlink]'); if (inp) { inp.select(); try { if (navigator.clipboard) navigator.clipboard.writeText(inp.value); else document.execCommand('copy'); } catch (e) { try { document.execCommand('copy'); } catch (e2) {} } } break; }
+      case 'report': if (window.reportProblem) window.reportProblem(); break;
       case 'shutdown':
         if (!T.confirm) { T.confirm = true; T.confirmAt = performance.now(); paint(); setTimeout(function () { T.confirm = false; paint(); }, 4000); }
         else if (performance.now() - T.confirmAt > 700) { api('/api/shutdown', { lamps_off: false }); T.confirm = false; showStopped(); }   // a quick double-click must not shut it down

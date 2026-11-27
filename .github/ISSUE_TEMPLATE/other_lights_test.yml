@@ -1,0 +1,49 @@
+name: Test report for WiZ, LIFX or WLED
+description: You tried the experimental support for another brand of light. Tell us whether it worked.
+labels: [other-lights]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        WiZ, LIFX and WLED support has not been tried on real lights yet, so every report here helps, including "it just worked".
+        Find it in Settings, Other lights. Do not paste IP addresses.
+  - type: dropdown
+    id: brand
+    attributes:
+      label: Which kind of light?
+      options: [WiZ, LIFX, WLED]
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      placeholder: WiZ A60 bulb, LIFX Beam, WLED on an ESP32 strip, ...
+    validations:
+      required: true
+  - type: dropdown
+    id: found
+    attributes:
+      label: Did Scan find it?
+      options: ["Yes, it was found", "No, I had to add it by IP address", "Could not add it at all"]
+    validations:
+      required: true
+  - type: dropdown
+    id: works
+    attributes:
+      label: Does it follow the music colours?
+      options: ["Yes, it works well", "Partly (see below)", "No"]
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: What you noticed
+      description: Colour accuracy, delay compared with the Govee lamps, flicker, brightness, anything odd.
+  - type: input
+    id: version
+    attributes:
+      label: Glowtrack version
+      placeholder: "3.1.2"
+    validations:
+      required: true

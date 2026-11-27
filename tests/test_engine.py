@@ -911,6 +911,39 @@ class OtherDevicesTest(unittest.TestCase):
         self.assertEqual(S.to_dict()["devices"], [])
 
 
+class ReportProblemTest(unittest.TestCase):
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def test_version_is_one_number_everywhere(self):
+        import config
+        plist = open(os.path.join(self.ROOT, "mac", "Info.plist")).read()
+        self.assertIn("<key>CFBundleShortVersionString</key><string>%s</string>" % config.VERSION, plist)
+        self.assertIn("<key>CFBundleVersion</key><string>%s</string>" % config.VERSION, plist)
+        S = engine.AppState()
+        self.assertEqual(S.to_dict()["version"], config.VERSION)
+
+    def test_issue_forms_exist_and_are_complete(self):
+        d = os.path.join(self.ROOT, ".github", "ISSUE_TEMPLATE")
+        for name in ("bug_report.yml", "other_lights_test.yml", "idea.yml", "config.yml"):
+            self.assertTrue(os.path.exists(os.path.join(d, name)), name)
+        bug = open(os.path.join(d, "bug_report.yml")).read()
+        for field_id in ("version", "macos", "what", "log"):        # the report link pre-fills "version"
+            self.assertIn("id: " + field_id, bug)
+        self.assertIn("blank_issues_enabled: false", open(os.path.join(d, "config.yml")).read())
+
+    def test_report_links_name_the_form_and_send_no_lamp_details(self):
+        web_dir = os.path.join(self.ROOT, "server", "web")
+        js = open(os.path.join(web_dir, "app.js")).read()
+        i = js.index("function reportProblem")
+        body = js[i:js.index("function shutdownServer")]
+        self.assertIn("template=bug_report.yml", body)
+        for secret in ("ip", "token", "paired", "cookie"):
+            self.assertNotIn(secret + "=", body.lower())
+        self.assertIn("reportProblem()", open(os.path.join(web_dir, "index.html")).read())
+        self.assertIn("data-act=\"' + o[0]", open(os.path.join(web_dir, "themes.js")).read())
+        self.assertIn("'report'", open(os.path.join(web_dir, "themes.js")).read())
+
+
 class TempoTest(unittest.TestCase):
     def test_title_cleaning(self):
         self.assertEqual(tempo.clean_track_title("Anti-Hero"), "Anti-Hero")

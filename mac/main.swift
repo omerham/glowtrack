@@ -16,7 +16,7 @@ import WebKit
 let serverPort = (Bundle.main.object(forInfoDictionaryKey: "GoveeServerPort") as? Int) ?? 8765
 let serverURL = URL(string: "http://127.0.0.1:\(serverPort)")!
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate, WKNavigationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate {
     private var statusItem: NSStatusItem!
     private let menu = NSMenu()
     private var server: Process?
@@ -255,6 +255,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         menu.addItem(.separator())
 
         menu.addItem(item("Open at Login", #selector(toggleLogin), tag: .login))
+        menu.addItem(item("Report a Problem…", #selector(reportProblem)))
         menu.addItem(item("Restart Lighting Server", #selector(restartServer)))
         menu.addItem(item("Quit Glowtrack", #selector(quit), key: "q"))
         updateMenuTitles()
@@ -364,6 +365,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             let web = WKWebView(frame: w.contentView!.bounds, configuration: config)
             web.autoresizingMask = [.width, .height]
             web.navigationDelegate = self
+            web.uiDelegate = self
             web.setValue(false, forKey: "drawsBackground")
             w.contentView?.addSubview(web)
 
@@ -390,6 +392,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         webView = nil
         window = nil
         NSApp.setActivationPolicy(.accessory)
+    }
+
+    // Links that open a new window (the Report a problem form) go to the default browser, not into the dashboard window.
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                 for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url = navigationAction.request.url, url.scheme == "https" { NSWorkspace.shared.open(url) }
+        return nil
+    }
+
+    @objc func reportProblem() {
+        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let theme = Bundle.main.object(forInfoDictionaryKey: "GoveeDefaultTheme") as? String ?? "classic"
+        let names = ["classic": "Classic", "a": "A Instrument", "b": "B Dot", "c": "C Poster", "d": "D Stage"]
+        var c = URLComponents(string: "https://github.com/omerham/glowtrack/issues/new")!
+        c.queryItems = [URLQueryItem(name: "template", value: "bug_report.yml"),
+                        URLQueryItem(name: "version", value: "\(v), design \(names[theme] ?? theme)")]
+        if let url = c.url { NSWorkspace.shared.open(url) }
     }
 
     // The server may still be starting when the window opens - keep retrying.

@@ -966,6 +966,17 @@ function copyPairLink() {
 }
 loadPairLink();
 
+// "Report a problem": opens the GitHub form with the version and design filled in (never lamp addresses or anything personal)
+function reportProblem() {
+  let theme = 'classic';
+  try { theme = localStorage.getItem('glowtrack.theme') || 'classic'; } catch (e) {}
+  const names = { classic: 'Classic', a: 'A Instrument', b: 'B Dot', c: 'C Poster', d: 'D Stage' };
+  const v = (currentState && currentState.version) || '';
+  const q = 'template=bug_report.yml&version=' + encodeURIComponent((v ? v + ', ' : '') + 'design ' + (names[theme] || theme));
+  window.open('https://github.com/omerham/glowtrack/issues/new?' + q, '_blank', 'noopener');
+}
+window.reportProblem = reportProblem;
+
 function shutdownServer() {
   if (!confirm('Shut down the lighting server?\n\nThe lamps stop syncing. To start again, open Glowtrack on your Mac.')) return;
   const lampsOff = confirm('Turn the lamps off too?\n\nOK = turn lamps off\nCancel = leave them on their current colour');

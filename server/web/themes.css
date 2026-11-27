@@ -685,3 +685,8 @@ body.in-mac-app #themeRoot .tscroll { top: 28px; }
 .D.fs.ly .credit p { max-width: 340px; }
 .D.ph .credit h3 { width: 350px; }
 .D.ph .credit p { max-width: 350px; }
+/* B settings: the dot rows must fit their column (they overflowed it and made a sideways scrollbar) */
+.B.st .row { grid-template-columns: 138px 1fr 62px; gap: 10px; }
+.B.st .row > * { min-width: 0; }
+.B.st .sd { gap: 3px; }
+.B.st .col { overflow-x: hidden; }
