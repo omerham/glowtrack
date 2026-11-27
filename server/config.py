@@ -4,7 +4,7 @@ import os
 import secrets
 import threading
 
-VERSION = "3.1.4"               # keep in step with mac/Info.plist
+VERSION = "3.2.0"               # keep in step with mac/Info.plist
 ISSUES_URL = "https://github.com/omerham/glowtrack/issues/new"
 
 # Lamps are found automatically on the local network (and remembered in the

@@ -79,6 +79,13 @@ WORK="$(mktemp -d)"
 gh repo clone "$REPO" "$WORK/public" -- -q
 mkdir -p "$WORK/exp-src"
 git archive HEAD | tar -x -C "$WORK/exp-src"
+# GitHub refuses a push that adds workflow files unless gh has the "workflow" permission; leave them out then
+if ! gh auth status 2>&1 | grep -q "workflow"; then
+  if [[ -d "$WORK/exp-src/.github/workflows" ]]; then
+    echo "   (gh lacks the 'workflow' permission: not pushing .github/workflows this time; see docs/releasing.md)"
+    rm -rf "$WORK/exp-src/.github/workflows"
+  fi
+fi
 rsync -a --delete --exclude .git "$WORK/exp-src/" "$WORK/public/"
 cd "$WORK/public"
 git add -A

@@ -10,8 +10,8 @@
     <key>CFBundleName</key><string>Glowtrack</string>
     <key>CFBundleDisplayName</key><string>Glowtrack</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>3.1.4</string>
-    <key>CFBundleVersion</key><string>3.1.4</string>
+    <key>CFBundleShortVersionString</key><string>3.2.0</string>
+    <key>CFBundleVersion</key><string>3.2.0</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>

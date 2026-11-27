@@ -25,6 +25,9 @@ It never pushes or publishes without the confirmation (unless you pass `--yes`).
 
 ## Things to know
 
+- Pushing the automatic-checks file `.github/workflows/tests.yml` needs the GitHub CLI's `workflow` permission.
+  Grant it once with `gh auth refresh -h github.com -s workflow` (it opens a browser page for you to approve).
+
 - The public repository and this local repository have different histories on purpose (the local history
   contains personal addresses); the script publishes a copy of the current files, not your local commits.
 - The first `--dist` build downloads the two Pillow wheels (Apple silicon and Intel) from PyPI, checks their
