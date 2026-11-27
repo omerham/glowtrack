@@ -4,8 +4,9 @@ web icons (home-screen, installable-app, maskable, favicon .ico/.png/.svg).
 
     /usr/bin/python3 mac/make_icon.py
 
-Two floor lamps, seven glowing zones each, colours flowing from crimson through orange and amber to warm
-white, standing on a dark warm surface. Needs Pillow; the .icns is made with macOS's iconutil.
+A glowing orb inside a track ring that is part played, colours running from crimson through orange and amber
+to warm white, on a dark warm surface. It stands for light following music, not for any particular lamp, brand or
+number of lights. Needs Pillow; the .icns is made with macOS's iconutil.
 """
 import math
 import os
@@ -24,8 +25,7 @@ S = 2048                                   # draw big, shrink for crisp edges
 FLOW = [(214, 40, 57), (246, 79, 52), (255, 122, 48), (255, 168, 46), (255, 202, 84), (255, 226, 150), (255, 244, 214)]
 
 
-FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#D62839"/><stop offset=".25" stop-color="#FF7A30"/><stop offset=".5" stop-color="#FFA82E"/><stop offset=".75" stop-color="#FFE296"/><stop offset="1" stop-color="#FFF4D6"/></linearGradient><radialGradient id="p"><stop offset="0" stop-color="#FF4F34" stop-opacity=".55"/><stop offset="1" stop-color="#FF4F34" stop-opacity="0"/></radialGradient></defs><rect width="64" height="64" rx="14" fill="#17110F"/><ellipse cx="22" cy="50" rx="14" ry="6" fill="url(#p)"/><ellipse cx="42" cy="50" rx="14" ry="6" fill="url(#p)"/><rect x="17.5" y="9" width="9" height="40" rx="4.5" fill="url(#g)"/><rect x="37.5" y="9" width="9" height="40" rx="4.5" fill="url(#g)"/></svg>
-"""
+FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><radialGradient id="o"><stop offset="0" stop-color="#FFF6E2"/><stop offset=".5" stop-color="#FFD678"/><stop offset="1" stop-color="#FF6A34"/></radialGradient><linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D62839"/><stop offset=".5" stop-color="#FF7A30"/><stop offset="1" stop-color="#FFE296"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#17110F"/><circle cx="32" cy="32" r="20.8" fill="none" stroke="#FFEBD7" stroke-opacity=".14" stroke-width="5.5"/><path d="M32 11.2A20.8 20.8 0 1 1 11.2 32" fill="none" stroke="url(#r)" stroke-width="5.5" stroke-linecap="round"/><circle cx="32" cy="32" r="9.5" fill="url(#o)"/></svg>"""
 
 
 def squircle_mask(size, body):
@@ -43,23 +43,42 @@ def squircle_mask(size, body):
     return m
 
 
-def lamp_tube(size, cx, top, seg_w, height):
-    """One lamp: a slim rounded column of light whose colour flows smoothly bottom to top."""
-    tube = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(tube)
-    for y in range(int(top), int(top + height) + 1):
-        t = 1 - (y - top) / height                      # 0 at the bottom, 1 at the top
-        pos = t * (len(FLOW) - 1)
-        i = min(len(FLOW) - 2, int(pos)); f = pos - i
-        c = tuple(int(FLOW[i][k] + (FLOW[i + 1][k] - FLOW[i][k]) * f) for k in range(3))
-        d.line([(cx - seg_w / 2, y), (cx + seg_w / 2, y)], fill=c + (255,))
-    hl = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    ImageDraw.Draw(hl).rounded_rectangle([cx - seg_w * 0.30, top + seg_w * 0.4, cx - seg_w * 0.12, top + height - seg_w * 0.4], radius=seg_w * 0.09, fill=(255, 255, 255, 80))
-    tube.alpha_composite(hl)
-    mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([cx - seg_w / 2, top, cx + seg_w / 2, top + height], radius=seg_w / 2, fill=255)
-    tube.putalpha(ImageChops.multiply(tube.split()[3], mask))
-    return tube
+def lerp_stops(stops, t):
+    t = min(1.0, max(0.0, t)) * (len(stops) - 1)
+    i = min(len(stops) - 2, int(t)); f = t - i
+    return tuple(int(stops[i][k] + (stops[i + 1][k] - stops[i][k]) * f) for k in range(3))
+
+
+ORB = [(255, 106, 52), (255, 160, 48), (255, 214, 120), (255, 246, 226)]    # edge to centre
+ARC = 0.75                                                                   # how far round the track has played
+
+
+def art_layer():
+    """The glow: a bright orb in the middle and a track ring round it, played from the top clockwise, its colour
+    running crimson to warm white, with a playhead at the end. Not tied to any lamp, brand or number of lights."""
+    c = S / 2
+    layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    R = S * 0.155
+    for k in range(int(R), 0, -2):                                # orb, a radial gradient from the edge in
+        d.ellipse([c - k, c - k, c + k, c + k], fill=lerp_stops(ORB, 1 - k / R) + (255,))
+    rr, w = S * 0.325, S * 0.052
+    ro = rr + w / 2                                                  # PIL draws a wide arc inward from its box, so the box is the outer edge
+    box = [c - ro, c - ro, c + ro, c + ro]
+    d.arc(box, 0, 360, fill=(255, 235, 215, 34), width=int(w))      # the whole track, faint
+    steps = int(360 * ARC * 2)
+    for i in range(steps):
+        a0 = 270 + i * 0.5; a1 = a0 + 0.9
+        d.arc(box, a0, a1, fill=lerp_stops(FLOW, i / (steps - 1)) + (255,), width=int(w))
+    def end_at(frac):
+        ang = math.radians(270 + 360 * ARC * frac)
+        return c + rr * math.cos(ang), c + rr * math.sin(ang)
+    x0, y0 = end_at(0)                                              # rounded start
+    d.ellipse([x0 - w / 2, y0 - w / 2, x0 + w / 2, y0 + w / 2], fill=FLOW[0] + (255,))
+    x1, y1 = end_at(1)
+    pr = S * 0.046                                                  # the playhead
+    d.ellipse([x1 - pr, y1 - pr, x1 + pr, y1 + pr], fill=(255, 246, 226, 255))
+    return layer
 
 
 def draw(full_bleed=False):
@@ -75,31 +94,12 @@ def draw(full_bleed=False):
             px[x, y] = c
     canvas.alpha_composite(bg)
 
-    cx_l, cx_r = S * 0.37, S * 0.63
-    seg_w, height = S * 0.078, S * 0.60
-    top = S * 0.165
-    floor_y = top + height
-    lamps = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    for cx in (cx_l, cx_r):
-        lamps.alpha_composite(lamp_tube(S, cx, int(top), int(seg_w), int(height)))
-
-    # light spilling onto the wall (wide and soft, then tight and bright), and onto the floor
-    for radius, a in ((S * 0.2, 0.85), (S * 0.09, 0.8), (S * 0.035, 0.7)):
-        g = lamps.filter(ImageFilter.GaussianBlur(radius))
+    art = art_layer()
+    for radius, a in ((S * 0.16, 0.55), (S * 0.07, 0.5), (S * 0.025, 0.4)):      # the glow, wide and soft then tight
+        g = art.filter(ImageFilter.GaussianBlur(radius))
         r_, g_, b_, al = g.split()
-        canvas.alpha_composite(Image.merge("RGBA", (r_, g_, b_, al.point(lambda v, a=a: min(255, int(v * a * 2.3))))))
-    pool = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    pd = ImageDraw.Draw(pool)
-    for cx in (cx_l, cx_r):
-        pd.ellipse([cx - S * 0.24, floor_y - S * 0.03, cx + S * 0.24, floor_y + S * 0.12], fill=FLOW[1] + (170,))
-    canvas.alpha_composite(pool.filter(ImageFilter.GaussianBlur(S * 0.055)))
-    bases = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    bd = ImageDraw.Draw(bases)
-    for cx in (cx_l, cx_r):                                  # base plates, the tubes stand in them
-        bd.ellipse([cx - S * 0.1, floor_y - S * 0.026, cx + S * 0.1, floor_y + S * 0.03], fill=(74, 56, 48, 255))
-        bd.ellipse([cx - S * 0.1, floor_y - S * 0.026, cx + S * 0.1, floor_y + S * 0.03], outline=(255, 190, 120, 120), width=5)
-    canvas.alpha_composite(bases)
-    canvas.alpha_composite(lamps)
+        canvas.alpha_composite(Image.merge("RGBA", (r_, g_, b_, al.point(lambda v, a=a: min(255, int(v * a * 1.8))))))
+    canvas.alpha_composite(art)
 
     if full_bleed:
         return canvas
