@@ -132,11 +132,11 @@ network. Open **Settings → Other lights**, press *Scan* (WiZ and LIFX are foun
 for a WLED strip type its IP address), then give each light a name you will recognise and choose whether it
 follows the left or right lamp (you can change both at any time).
 Single-colour lights show the average of that lamp's colours; a WLED strip spreads the lamp's 7 zones
-along its length (turn on WLED's realtime/UDP listening, which is the default).
+along its length (WLED must accept UDP realtime; see the testing guide).
 
 These drivers (`server/devices.py`) were written from the products' published protocols and are
 checked against fake devices in the tests, but **have not been tried on real hardware yet**. If you
-try one, please report whether it worked. Other Govee models that report their model name are
+try one, please follow the 5-minute [testing guide](docs/test-other-lights.md) and report whether it worked. Other Govee models that report their model name are
 driven with a single colour, since only the H6076's zone packets are known.
 
 ## Designs
