@@ -1,0 +1,821 @@
+/* Custom styles for the dashboard (Tailwind utilities are in tailwind.css) */
+:root {
+  --app-font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  --mono-font: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --theme-accent: #6366F1;
+  --theme-accent-glow: rgba(99, 102, 241, 0.45);
+  --theme-accent-bg: rgba(99, 102, 241, 0.16);
+  --theme-accent-border: rgba(99, 102, 241, 0.42);
+  --theme-accent-text: #FFFFFF;
+  /* Controls are always white - they don't change with the album colour */
+  --ctl: #FFFFFF;
+  --ctl-text: #0B0E14;
+  --ctl-bg: rgba(255, 255, 255, 0.10);
+  --ctl-border: rgba(255, 255, 255, 0.45);
+  --ctl-glow: rgba(255, 255, 255, 0.16);
+}
+::selection {
+  background-color: var(--theme-accent) !important;
+  color: var(--theme-accent-text, #000000) !important;
+}
+::-moz-selection {
+  background-color: var(--theme-accent) !important;
+  color: var(--theme-accent-text, #000000) !important;
+}
+body {
+  font-family: var(--app-font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.font-mono {
+  font-family: var(--mono-font);
+}
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+@keyframes pulseBeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.02); }
+}
+@keyframes subtleFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+.pulse-active {
+  animation: pulseBeat var(--beat-duration, 0.5s) ease-in-out infinite;
+}
+.lamp-glow-eff {
+  /* Soft light around the lamp: the lamp's own zone colours (bottom to top),
+     faded out with a mask. A mask is far cheaper to redraw than a blur filter. */
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  width: 140px;
+  height: 260px;
+  transform: translateX(-50%);
+  opacity: 0.5;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 20%, rgba(0,0,0,0.35) 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 20%, rgba(0,0,0,0.35) 55%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+/* Low power / paused preview: no blurred glows */
+.preview-lite .lamp-glow-eff,
+.preview-lite .lamp-floor-puddle {
+  display: none;
+}
+.lamp-pole-eff {
+  position: relative;
+  width: 18px;
+  height: 216px;
+  min-height: 216px;
+  flex-shrink: 0;
+  border-radius: 9px 9px 3px 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #0E1014;
+  box-shadow: 0 0 18px rgba(0,0,0,0.9), inset 0 0 4px rgba(0,0,0,0.5);
+  z-index: 10;
+}
+/* 3D Cylindrical Core Specular Highlight - Frosted Glass Reflection */
+.lamp-pole-eff::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, 
+    rgba(0,0,0,0.20) 0%, 
+    rgba(255,255,255,0.28) 25%, 
+    rgba(255,255,255,0.75) 50%, 
+    rgba(255,255,255,0.28) 75%, 
+    rgba(0,0,0,0.20) 100%);
+  pointer-events: none;
+  z-index: 12;
+  opacity: 0.55;
+}
+.lamp-segment {
+  flex: 1 1 0%;
+  position: relative;
+  z-index: 5;
+  background-color: #15171C;
+  transition: background-color var(--seg-ms, 320ms) linear;
+}
+.lamp-segment:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  z-index: 11;
+  pointer-events: none;
+}
+.lamp-base-pedestal {
+  position: relative;
+  width: 48px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #5A606E 0%, #252830 60%, #121418 100%);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.92), inset 0 1px 1px rgba(255,255,255,0.45);
+  z-index: 15;
+}
+.lamp-stem {
+  width: 5px;
+  height: 8px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #30343D 0%, #5E6573 50%, #20232A 100%);
+  z-index: 14;
+}
+.lamp-floor-puddle {
+  position: absolute;
+  bottom: -7px;
+  width: 80px;
+  height: 18px;
+  border-radius: 50%;
+  filter: blur(10px);
+  opacity: 0.6;
+  z-index: 4;
+  pointer-events: none;
+}
+.lamp-cap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 9px 9px 0 0;
+  background: linear-gradient(180deg, #6C7280 0%, #262930 100%);
+  z-index: 13;
+  border-bottom: 1px solid rgba(0,0,0,0.5);
+}
+/* Sleek Range Slider */
+input[type=range] {
+  -webkit-appearance: none;
+  background: transparent;
+}
+input[type=range]:focus {
+  outline: none;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  border: none;
+  transition: background 0.2s ease;
+}
+input[type=range]:hover::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.18);
+}
+input[type=range]::-webkit-slider-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(255, 255, 255, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 2px 14px var(--ctl-glow), 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+/* Mode Cards */
+.mode-card {
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mode-btn-active {
+  background: linear-gradient(135deg, var(--ctl-bg) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+  border-color: var(--ctl-border) !important;
+  box-shadow: 0 0 20px -4px var(--ctl-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+.mode-btn-active .title-span {
+  color: var(--ctl) !important;
+}
+.mode-btn-active .icon-container {
+  background: var(--ctl) !important;
+  color: var(--ctl-text) !important;
+  border-color: var(--ctl) !important;
+}
+.mode-btn-inactive {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.mode-btn-inactive:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+.mode-btn-inactive .icon-container {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94A3B8;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+/* Swatch Dots */
+.swatch-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.2);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.4);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.swatch-dot:hover {
+  transform: scale(1.22);
+  border-color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.8), 0 0 10px rgba(255,255,255,0.3);
+  z-index: 10;
+}
+/* Modern Glass Switch */
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255, 255, 255, 0.12);
+  transition: .25s ease;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #CBD5E1;
+  transition: .25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.switch-toggle input:checked + .switch-slider {
+  background-color: var(--ctl);
+  border-color: var(--ctl);
+}
+.switch-toggle input:checked + .switch-slider:before {
+  transform: translateX(16px);
+  background-color: var(--ctl-text);
+  box-shadow: none;
+}
+
+/* Moving modes: a colour strip slides through each lamp (and its glow) as one
+   GPU animation. The zone blocks go transparent so the strip shows through;
+   the zone divider lines and glass highlight stay on top. */
+.flow-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+.flow-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-repeat: repeat-y;
+  background-position: left bottom;
+  will-change: transform;
+  animation-name: flowSlide;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes flowSlide {
+  from { transform: translateY(0); }
+  to   { transform: translateY(var(--loop)); }
+}
+.flow-live .lamp-segment {
+  background-color: transparent !important;
+}
+
+/* ---- Any device ---- */
+/* Keep clear of the notch / home bar when opened as a home-screen app */
+.app-body {
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+}
+/* Phones: start at the top and scroll normally; slimmer card padding; bigger touch targets */
+body.is-phone {
+  align-items: flex-start;
+}
+body.is-phone #appShell {
+  padding: 16px;
+  border-radius: 22px;
+}
+body.is-phone button,
+body.is-phone .mode-card {
+  min-height: 40px;
+}
+body.is-phone input[type=range]::-webkit-slider-thumb {
+  height: 22px;
+  width: 22px;
+  margin-top: -8px;
+}
+body.is-phone #settingsModalCard {
+  max-height: 88vh;
+  border-radius: 22px;
+  padding: 16px;
+}
+/* No hover "lift" on touch screens (it sticks after a tap) */
+@media (hover: none) {
+  .mode-btn-inactive:hover { transform: none; }
+  .swatch-dot:hover { transform: none; }
+}
+
+/* Lamp toolbar wraps instead of running off narrow screens */
+.lamp-toolbar { flex-wrap: wrap; gap: 10px; }
+.lamp-toolbar-buttons button { white-space: nowrap; }
+body.is-phone .lamp-toolbar-buttons { width: 100%; justify-content: space-between; }
+body.is-phone .lamp-toolbar-buttons button { flex: 1; justify-content: center; }
+
+/* ---- Album-colour page background ---- */
+body.app-body { background-color: #060A1A !important; }
+.page-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 1.6s ease;
+}
+#appShell { position: relative; z-index: 1; }
+/* Let the cool gradient glow through the card a little (static blur: no animation, no CPU) */
+#appShell {
+  background: rgba(13, 17, 33, 0.80) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  backdrop-filter: blur(16px) saturate(1.2);
+  border-color: rgba(150, 175, 255, 0.14) !important;
+}
+/* Room for the window's drag strip in the Mac app */
+body.in-mac-app.app-body { padding-top: max(36px, env(safe-area-inset-top)); }
+
+/* ---- Full-screen now-playing view ---- */
+.fs-view {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: none;
+  background: #090B0E;
+  color: #fff;
+  overflow: hidden;
+  cursor: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+body.fs-open .fs-view { display: block; }
+body.fs-open { overflow: hidden; }
+body.fs-controls-on .fs-view { cursor: default; }
+.fs-bg {
+  position: absolute;
+  inset: 0;
+  transition: opacity 1.6s ease;
+}
+.fs-art-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(6vh, env(safe-area-inset-top)) 6vw max(18vh, calc(env(safe-area-inset-bottom) + 120px));
+}
+.fs-art {
+  width: min(58vh, 72vw);
+  height: min(58vh, 72vw);
+  object-fit: cover;
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.fs-meta {
+  position: absolute;
+  left: max(3vw, env(safe-area-inset-left));
+  bottom: max(4vh, calc(env(safe-area-inset-bottom) + 16px));
+  right: 30vw;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.fs-title {
+  font-size: clamp(22px, 3.2vw, 44px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fs-artist {
+  margin-top: 4px;
+  font-size: clamp(14px, 1.6vw, 22px);
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Controls: hidden until you tap/click */
+.fs-controls {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 35%, transparent 80%, rgba(0, 0, 0, 0.35) 100%);
+}
+body.fs-controls-on .fs-controls { opacity: 1; pointer-events: auto; }
+body.fs-controls-on .fs-meta { transform: translateY(-118px); }
+.fs-exit {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+body.in-mac-app .fs-exit { top: 40px; }
+.fs-exit svg { width: 20px; height: 20px; }
+.fs-bottom {
+  position: absolute;
+  left: max(3vw, env(safe-area-inset-left));
+  right: max(3vw, env(safe-area-inset-right));
+  bottom: max(3vh, calc(env(safe-area-inset-bottom) + 10px));
+}
+.fs-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 600 12px var(--mono-font);
+  color: rgba(255, 255, 255, 0.75);
+}
+.fs-progress {
+  flex: 1;
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+.fs-progress-bar {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  transform-origin: left center;
+  transform: scaleX(0);
+  will-change: transform;
+}
+.fs-buttons {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+.fs-buttons button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.10);
+}
+.fs-buttons button svg { width: 22px; height: 22px; }
+.fs-buttons .fs-play {
+  width: 64px;
+  height: 64px;
+  background: #fff;
+  color: #0B0E14;
+}
+.fs-buttons .fs-play svg { width: 28px; height: 28px; }
+.fs-icon-pause { display: none; }
+body.is-playing .fs-icon-pause { display: block; }
+body.is-playing .fs-icon-play { display: none; }
+/* Phones: title above the cover area, a bit smaller */
+body.fs-narrow .fs-art { width: min(80vw, 52vh); height: min(80vw, 52vh); }
+body.fs-narrow .fs-meta { right: 6vw; }
+
+/* Drifting album-colour blobs behind the full-screen view */
+.fs-blobs { position: absolute; inset: 0; overflow: hidden; --blob-s: 40s; }
+.fs-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.85;
+  will-change: transform;
+  transition: background-color 2.5s ease;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+.fs-b1 { width: 70vmax; height: 70vmax; left: -15vmax; top: -20vmax; animation-name: fsDrift1; animation-duration: var(--blob-s); }
+.fs-b2 { width: 65vmax; height: 65vmax; right: -18vmax; top: 10vmax; animation-name: fsDrift2; animation-duration: calc(var(--blob-s) * 1.3); }
+.fs-b3 { width: 55vmax; height: 55vmax; left: 10vmax; bottom: -25vmax; animation-name: fsDrift3; animation-duration: calc(var(--blob-s) * 0.85); }
+@keyframes fsDrift1 { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30vw, 20vh) scale(1.2); } 100% { transform: translate(10vw, 45vh) scale(0.9); } }
+@keyframes fsDrift2 { 0% { transform: translate(0, 0) scale(1.1); } 50% { transform: translate(-35vw, -15vh) scale(0.85); } 100% { transform: translate(-15vw, 25vh) scale(1.2); } }
+@keyframes fsDrift3 { 0% { transform: translate(0, 0) scale(0.9); } 50% { transform: translate(30vw, -30vh) scale(1.2); } 100% { transform: translate(-10vw, -10vh) scale(1); } }
+.fs-blobs.fs-still .fs-blob { animation: none; }
+/* Only animate while full screen is open */
+body:not(.fs-open) .fs-blob { animation-play-state: paused; }
+/* Darken a little so the cover and text stay readable */
+.fs-shade { position: absolute; inset: 0; background: rgba(9, 11, 14, 0.28); pointer-events: none; }
+
+/* ---- Settings window ---- */
+.st-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 12px 16px;
+}
+.st-title { font-size: 12px; font-weight: 700; color: #E2E8F0; margin-bottom: 4px; }
+.st-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.st-title + .st-row, .st-row-first { border-top: none; }
+.st-row input[type=range] { flex: 1; min-width: 80px; cursor: pointer; }
+.st-label { flex: 0 0 160px; color: #94A3B8; font-weight: 600; font-size: 12px; white-space: nowrap; }
+.st-label-wide { flex: 1; }
+.st-val { color: #fff; font-family: var(--mono-font); font-weight: 700; margin-left: 4px; }
+.st-grow { flex: 1; }
+.st-hint { font-size: 11px; line-height: 1.45; color: #64748B; margin: 0 0 4px; }
+.st-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0 8px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.st-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #E2E8F0;
+  white-space: nowrap;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  transition: background 0.15s ease;
+}
+.st-btn:hover { background: rgba(255, 255, 255, 0.12); }
+.st-btn:active { transform: scale(0.96); }
+.st-btn-danger { color: #FCA5A5; background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.35); }
+.st-btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
+body.is-phone .st-label { flex-basis: 120px; }
+body.is-phone .st-actions .st-btn { flex: 1; justify-content: center; }
+/* Phones: settings rows wrap instead of overflowing; lamp toolbar buttons shrink */
+body.is-phone .st-row { flex-wrap: wrap; }
+body.is-phone .st-row .st-grow { display: none; }
+body.is-phone .st-row input[type=range] { flex: 1 1 140px; }
+body.is-phone .lamp-toolbar-buttons { gap: 6px; }
+body.is-phone .lamp-toolbar-buttons button { min-width: 0; padding: 6px 6px; font-size: 11px; }
+body.is-phone .lamp-toolbar-buttons button svg { display: none; }
+
+/* ---- Full-screen lyrics mode ---- */
+.fs-art-wrap { transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease; }
+body.fs-lyrics-on .fs-art-wrap { transform: translateX(-24vw) scale(0.9); }
+.fs-lyrics {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 46vw;
+  right: max(5vw, env(safe-area-inset-right));
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(6vw);
+  pointer-events: none;
+  transition: opacity 0.5s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  /* lines fade out towards the top and bottom edges */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 70%, transparent 100%);
+  --ly-on: #fff;
+  --ly-off: rgba(255, 255, 255, 0.42);
+  --ly-past: rgba(255, 255, 255, 0.28);
+}
+body.fs-lyrics-on .fs-lyrics { opacity: 1; transform: none; pointer-events: auto; }
+.fs-lyrics.ly-dark-text {
+  --ly-on: #0b0b0d;
+  --ly-off: rgba(11, 11, 13, 0.45);
+  --ly-past: rgba(11, 11, 13, 0.3);
+}
+.fs-lyrics-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 40vh;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.fs-ly-line {
+  font-size: clamp(22px, 2.7vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  padding: 0.32em 0;
+  color: var(--ly-off);
+  transition: color 0.35s ease;
+  cursor: pointer;
+}
+.fs-ly-line.past { color: var(--ly-past); }
+.fs-ly-line.on { color: var(--ly-on); }
+.fs-lyrics.ly-plain .fs-ly-line { color: var(--ly-on); cursor: default; }
+.fs-lyrics.ly-plain .fs-lyrics-list { top: 14vh; }
+.fs-lyrics-msg {
+  position: absolute;
+  top: 44vh;
+  left: 0;
+  right: 0;
+  font-size: clamp(18px, 2vw, 28px);
+  font-weight: 700;
+  color: var(--ly-off);
+}
+.fs-lyrics-btn {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  right: calc(max(18px, env(safe-area-inset-right)) + 56px);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.fs-lyrics-btn svg { width: 20px; height: 20px; }
+body.fs-lyrics-on .fs-lyrics-btn { background: #fff; color: #000; }
+body.in-mac-app .fs-lyrics-btn { top: 40px; }
+/* Phones: lyrics take the screen; the cover steps aside */
+body.fs-narrow.fs-lyrics-on .fs-art-wrap { transform: scale(0.6); opacity: 0; }
+body.fs-narrow .fs-lyrics { left: 6vw; right: 6vw; }
+
+/* Full-screen progress bar: drag or tap to move through the song */
+.fs-scrub {
+  position: relative;
+  flex: 1;
+  padding: 12px 0;          /* bigger target for fingers */
+  cursor: pointer;
+  touch-action: none;
+}
+.fs-scrub .fs-progress { transition: height 0.15s ease; }
+.fs-scrub:hover .fs-progress, .fs-scrub.dragging .fs-progress { height: 7px; }
+.fs-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.15s ease, left 0.5s linear;
+  pointer-events: none;
+}
+.fs-scrub.dragging .fs-thumb { transition: opacity 0.15s ease; }
+.fs-scrub:hover .fs-thumb, .fs-scrub.dragging .fs-thumb { opacity: 1; }
+
+/* The controls layer covers the screen for its shading only: taps go through
+   to the lyrics, and just the buttons and the bar catch them */
+.fs-controls { pointer-events: none !important; }
+body.fs-controls-on .fs-controls > * { pointer-events: auto; }
+
+/* ---- Shuffle / repeat / volume ---- */
+.pb-toggle, .fs-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+.pb-toggle { width: 32px; height: 32px; }
+.pb-toggle svg { width: 16px; height: 16px; }
+.pb-toggle:hover, .fs-toggle:hover { color: rgba(255, 255, 255, 0.85); }
+.pb-toggle:active, .fs-toggle:active { transform: scale(0.9); }
+.pb-toggle.on, .fs-toggle.on { color: #fff; }
+/* a small dot under the icon when it's on, like Spotify */
+.pb-toggle.on::after, .fs-toggle.on::after {
+  content: "";
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.fs-buttons .fs-toggle { width: 44px; height: 44px; background: none; border: none; }
+.fs-buttons .fs-toggle svg { width: 20px; height: 20px; }
+
+.vol-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; max-width: 260px; }
+.vol-icon { display: flex; color: rgba(255, 255, 255, 0.7); padding: 2px; }
+.vol-icon:hover { color: #fff; }
+.vol-icon svg { width: 18px; height: 18px; }
+.vol-muted .vol-wave { opacity: 0.2; }
+.vol-val { width: 26px; text-align: right; font: 600 11px var(--mono-font); color: rgba(255, 255, 255, 0.6); }
+.vol-slider { flex: 1; min-width: 80px; cursor: pointer; }
+.fs-volume {
+  position: absolute;
+  right: 0;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(220px, 22vw);
+}
+body.fs-narrow .fs-volume { position: static; width: 100%; margin-top: 10px; }
+body.is-phone .vol-row { max-width: none; }
+
+/* Settings: small segmented picker */
+.st-seg { display: flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 10px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.06); }
+.st-seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: #94A3B8; border-radius: 8px; transition: background 0.15s ease, color 0.15s ease; }
+.st-seg button:hover { color: #fff; }
+.st-seg button.on { background: #fff; color: #000; }
+
+
+body.fs-narrow.fs-controls-on .fs-meta { transform: translateY(-160px); }   /* room for the volume row */
+
+/* Full screen: Settings button left of the lyrics button; Settings opens on top */
+.fs-settings-btn { right: calc(max(18px, env(safe-area-inset-right)) + 112px); }
+body.fs-lyrics-on .fs-settings-btn { background: rgba(255, 255, 255, 0.12); color: #fff; }
+#settingsModal { z-index: 90; }
+
+.fs-art-box { position: relative; line-height: 0; }
+
+/* ---- Title / artist: never under the lyrics; long ones scroll like Spotify ---- */
+body.fs-lyrics-on .fs-meta { right: calc(54vw + 2vw); }
+body.fs-narrow.fs-lyrics-on .fs-meta { right: 6vw; }
+.fs-title, .fs-artist { text-overflow: clip; }
+.mq-inner { display: inline-block; white-space: nowrap; will-change: auto; }
+.mq-on {
+  /* soft fade at both edges while scrolling */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 28px), transparent 100%);
+}
+.mq-on .mq-inner {
+  padding-left: 16px;
+  margin-left: -16px;
+  will-change: transform;
+  animation: mqScroll var(--mq-dur, 12s) linear infinite;
+}
+.mq-gap { display: inline-block; width: 3em; }
+/* hold at the start, glide one full title length, then loop seamlessly */
+@keyframes mqScroll {
+  0%, 18% { transform: translateX(0); }
+  100% { transform: translateX(calc(-1 * var(--mq-dist, 0px))); }
+}
+body:not(.fs-open) .mq-on .mq-inner { animation-play-state: paused; }
+
+/* Room for letters that dip below the line (g, y, p, j) - the title box
+   clips its overflow so long titles can scroll, which was cutting them off */
+.fs-title, .fs-artist { padding-bottom: 0.18em; margin-bottom: -0.18em; padding-top: 0.06em; margin-top: -0.06em; }
+.fs-artist { margin-top: calc(4px - 0.06em); }
+
+/* Full screen follows the screen's shape, not whether it's touch: tall/narrow
+   screens get the phone layout, wide ones (Mac, iPad sideways, Echo Show) the
+   Mac layout. The title and artist turn dark on light covers, like the lyrics. */
+.fs-meta.tone-dark .fs-title { color: #0b0b0d; }
+.fs-meta.tone-dark .fs-artist { color: rgba(11, 11, 13, 0.65); }
+
+/* Short, wide screens (Echo Show, phone sideways, small laptop windows): the
+   cover fills the space above the title (about 84px at the bottom) and sits
+   centred in it, instead of a fixed share of the height */
+@media (orientation: landscape) and (max-height: 620px) {
+  body:not(.fs-narrow) .fs-art-wrap {
+    padding: max(4vh, 14px) 6vw calc(max(4vh, 16px) + 84px);
+  }
+  body:not(.fs-narrow) .fs-art {
+    width: min(calc(100vh - 8vh - 96px), 62vw);
+    height: min(calc(100vh - 8vh - 96px), 62vw);
+  }
+}
+
+body.no-sr .js-shuffle, body.no-sr .js-repeat { display: none; }

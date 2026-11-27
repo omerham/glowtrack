@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Glowtrack</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- Works as a home-screen app on iPhone, iPad and Android -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Govee Sync">
+  <meta name="theme-color" content="#060A1A">
+  <link rel="apple-touch-icon" href="/icon-180.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2312151B'/%3E%3Cpath d='M16 4C10.5 4 6 8.5 6 14c0 3.6 2 6.8 5 8.5V24c0 .5.5 1 1 1h8c.5 0 1-.5 1-1v-1.5c3-1.7 5-4.9 5-8.5 0-5.5-4.5-10-10-10z' stroke='%23FFF' stroke-width='1.5' fill='none'/%3E%3Cellipse cx='13.8' cy='16.5' rx='2.4' ry='1.9' fill='%236366F1'/%3E%3Cline x1='16' y1='16' x2='16' y2='9.5' stroke='%236366F1' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M16 9.5C18.2 10 19.8 11.8 19.2 14' stroke='%236366F1' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/tailwind.css">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body class="bg-[#060A1A] text-slate-100 min-h-screen flex items-center justify-center p-3 antialiased relative overflow-x-hidden app-body">
+
+  <!-- Ambient Dynamic Colored Light Aura -->
+  <!-- Album-colour gradient background (two layers that cross-fade on song change) -->
+  <div id="pageBgA" class="page-bg" style="opacity:1"></div>
+  <div id="pageBgB" class="page-bg" style="opacity:0"></div>
+  <div class="fixed -bottom-40 -left-40 w-[500px] h-[500px] rounded-full pointer-events-none opacity-15 blur-[100px] bg-slate-800"></div>
+
+  <!-- Studio Shell Card -->
+  <div id="appShell" class="w-full max-w-4xl bg-[#12151B]/95 border border-white/[0.08] rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden ring-1 ring-white/[0.04]">
+
+    <!-- Top Window / App Header -->
+    <div class="flex items-center justify-between border-b border-white/[0.06] pb-5 mb-6 drag-region flex-wrap gap-4">
+      <div class="flex items-center gap-3.5 no-drag">
+        <!-- Modern Glowing Light Bulb with Musical Note Filament -->
+        <div class="relative group" title="Glowtrack">
+          <div id="headerBulbContainer" class="w-11 h-11 rounded-2xl bg-gradient-to-br from-white/[0.12] via-[#1A1F2B] to-[#101319] p-2 flex items-center justify-center shadow-lg transition-all duration-500 ring-1 ring-white/15" style="box-shadow: 0 4px 20px var(--theme-accent-glow);">
+            <svg class="w-7 h-7" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="bulbAuraGrad" cx="50%" cy="40%" r="55%">
+                  <stop offset="0%" stop-color="var(--theme-accent)" stop-opacity="0.38"/>
+                  <stop offset="100%" stop-color="var(--theme-accent)" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <!-- Interior Ambient Glow -->
+              <circle cx="16" cy="13" r="8.5" fill="url(#bulbAuraGrad)"/>
+              <!-- Light Bulb Glass Outer Shell -->
+              <path d="M16 4C10.477 4 6 8.477 6 14C6 17.65 8 20.84 11 22.5V24C11 24.55 11.45 25 12 25H20C20.55 25 21 24.55 21 24V22.5C24 20.84 26 17.65 26 14C26 8.477 21.523 4 16 4Z" 
+                    stroke="rgba(255, 255, 255, 0.82)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- Screw Base Threads & Contact -->
+              <path d="M12 27H20" stroke="rgba(255, 255, 255, 0.55)" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M13.5 29H18.5" stroke="rgba(255, 255, 255, 0.38)" stroke-width="1.5" stroke-linecap="round"/>
+              <!-- Glowing Musical Eighth Note Filament -->
+              <ellipse cx="13.8" cy="16.5" rx="2.4" ry="1.9" transform="rotate(-15 13.8 16.5)" fill="var(--theme-accent)" stroke="var(--theme-accent)" stroke-width="0.5"/>
+              <line x1="16" y1="16" x2="16" y2="9.5" stroke="var(--theme-accent)" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M16 9.5C18.2 10 19.8 11.8 19.2 14" stroke="var(--theme-accent)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+            </svg>
+          </div>
+          <!-- Clean status pip -->
+          <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#0E1116] flex items-center justify-center ring-2 ring-[#0E1116]">
+            <span id="headerSyncDot" class="w-2 h-2 rounded-full" style="background-color: #FFFFFF;"></span>
+          </span>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2">
+            <div class="text-base font-bold text-white tracking-tight">Glowtrack</div>
+            <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/[0.08]">Beta</span>
+          </div>
+          <div id="statusBadgeText" class="text-xs text-slate-400 mt-0.5 font-medium flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full" style="background-color: var(--theme-accent);"></span>
+            2 Govee Lamps Synchronized
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5 no-drag flex-wrap justify-end">
+        <span id="liveSyncPill" class="text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-2 shadow-sm transition-all duration-500" style="color: #FFFFFF; background-color: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22);">
+          <span class="w-1.5 h-1.5 rounded-full" style="background-color: #FFFFFF;"></span>
+          Live Sync
+        </span>
+        <div class="flex items-center bg-white/[0.05] p-1 rounded-xl border border-white/[0.08]">
+          <button onclick="sendPower(true)" id="btnPowerOn" class="px-3 py-1 text-xs font-bold rounded-lg transition shadow-sm hover:brightness-110 active:scale-95" style="background-color: var(--ctl); color: var(--ctl-text);">Power ON</button>
+          <button onclick="sendPower(false)" id="btnPowerOff" class="px-3 py-1 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition active:scale-95">Power OFF</button>
+        </div>
+        <button onclick="enterFullscreen()" id="btnFullscreen" title="Full screen" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white/[0.06] hover:bg-white/[0.14] text-slate-300 hover:text-white transition flex items-center gap-1.5 active:scale-95 border border-white/[0.08] shadow-sm">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          Full Screen
+        </button>
+        <button onclick="toggleSettingsModal(true)" id="btnOpenSettings" title="Room & Lamp Arrangement Settings" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white/[0.06] hover:bg-white/[0.14] text-slate-300 hover:text-white transition flex items-center gap-1.5 active:scale-95 border border-white/[0.08] shadow-sm">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Settings</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Stage Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+
+      <!-- Album Art & Track Stage (Left Column) -->
+      <div class="md:col-span-5 flex flex-col items-center md:items-start text-center md:text-left">
+        <div id="artCoverCard" class="relative w-52 h-52 rounded-2xl overflow-hidden shadow-2xl border border-white/[0.12] group flex items-center justify-center ring-1 ring-white/[0.05] transition-all duration-700" style="background: linear-gradient(135deg, var(--theme-accent) 0%, rgba(20,24,34,0.95) 100%);">
+          <!-- Ambient Light-Matched Color Fill (shown when no cover art / ad breaks) -->
+          <div id="artAmbientAura" class="absolute inset-0 transition-opacity duration-700 flex flex-col items-center justify-center p-4 text-center select-none" style="opacity: 1;">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg mb-2 ring-1 ring-white/20" style="background: rgba(0,0,0,0.35); backdrop-filter: blur(8px);">
+              <svg class="w-8 h-8 text-white drop-shadow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+              </svg>
+            </div>
+            <span id="artCoverPlaceholderText" class="text-xs font-bold uppercase tracking-wider text-white drop-shadow">Room Light Sync</span>
+            <span id="artCoverPlaceholderSub" class="text-[10px] text-white/80 font-mono mt-0.5">Dual Lamp Ambient</span>
+          </div>
+
+          <!-- Real Album Cover Artwork (fades in cleanly over ambient fill when available) -->
+          <img id="artImg" src="" alt="Album Cover" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 z-10">
+
+          <!-- Subtle Vignette for Badge Legibility -->
+          <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none z-20"></div>
+
+          <div id="artHexBadge" class="absolute bottom-3 left-3 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md text-[11px] font-mono font-bold text-white shadow-lg border border-white/15 flex items-center gap-1.5 z-30">
+            <span class="w-2 h-2 rounded-full" style="background-color: var(--theme-accent);"></span>
+            <span id="artHexText">#Theme</span>
+          </div>
+        </div>
+
+        <div id="trackTitle" class="text-xl font-bold text-white mt-4 line-clamp-1 tracking-tight" title="Waiting for Spotify...">Waiting for Spotify...</div>
+        <div id="trackArtist" class="text-sm font-medium text-slate-400 mt-0.5"></div>
+
+        <!-- Timeline Progress Bar (Supports mouse scrub and iPad/Echo touch scrub) -->
+        <div class="w-full mt-3.5 flex flex-col gap-1.5 select-none">
+          <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 select-none">
+            <span id="trackTimeElapsed">0:00</span>
+            <span id="trackTimeTotal">0:00</span>
+          </div>
+          <div id="trackProgressContainer" class="relative w-full h-3 flex items-center cursor-pointer group select-none" onmousedown="startScrub(event)" ontouchstart="startTouchScrub(event)">
+            <div class="w-full h-1.5 bg-white/10 group-hover:bg-white/20 rounded-full overflow-visible relative transition-colors">
+              <div id="trackProgressBar" class="h-full rounded-full relative pointer-events-none" style="width: 100%; background: #FFFFFF; transform-origin: left center; transform: scaleX(0); will-change: transform;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Music Playback Controls -->
+        <div class="flex items-center gap-3.5 mt-3 select-none">
+          <button onclick="toggleShuffle()" title="Shuffle" class="pb-toggle js-shuffle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button>
+          <button onclick="sendPlayback('prev')" title="Previous Track" class="w-8 h-8 rounded-full bg-white/[0.06] hover:bg-white/[0.14] text-slate-300 hover:text-white transition flex items-center justify-center active:scale-90 border border-white/[0.08] shadow-sm">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+          <button onclick="sendPlayback('playpause')" id="btnPlayPause" title="Play / Pause" class="w-10 h-10 rounded-full hover:scale-105 active:scale-95 transition flex items-center justify-center shadow-lg ring-2 ring-white/20" style="background-color: var(--ctl); color: var(--ctl-text);">
+            <svg id="iconPlay" class="w-4 h-4 fill-current hidden ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="iconPause" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+          <button onclick="sendPlayback('next')" title="Next Track" class="w-8 h-8 rounded-full bg-white/[0.06] hover:bg-white/[0.14] text-slate-300 hover:text-white transition flex items-center justify-center active:scale-90 border border-white/[0.08] shadow-sm">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+          <button onclick="toggleRepeat()" title="Repeat" class="pb-toggle js-repeat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button>
+        </div>
+        <div class="vol-row">
+          <button class="vol-icon" onclick="toggleMute()" title="Mute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="vol-wave" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button>
+          <input type="range" id="volSlider" class="vol-slider js-vol" min="0" max="100" step="1" value="50" oninput="onVolume(this)" aria-label="Spotify volume">
+          <span id="volVal" class="vol-val">50</span>
+        </div>
+
+        <div class="flex items-center gap-2 mt-3.5">
+          <span id="trackBpmBadge" class="text-xs font-mono font-bold px-3 py-1 rounded-lg bg-white/[0.06] border border-white/[0.1] text-slate-200 flex items-center gap-1.5 shadow-sm">
+            <svg class="w-3.5 h-3.5" style="color: #FFFFFF;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span id="trackBpmText">120 BPM</span>
+          </span>
+          <span id="boldMatchBadge" class="text-xs font-mono font-bold px-3 py-1 rounded-lg shadow-sm transition-all duration-500" style="color: #FFFFFF; background-color: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22);">Bold Match</span>
+        </div>
+
+        <!-- Extracted Palette Swatches -->
+        <div id="swatchesContainer" class="flex items-center gap-2 mt-4"></div>
+      </div>
+
+      <!-- Virtual Stage: Two Glowing Acrylic Floor Lamps (Right Column) -->
+      <div id="lampsArena" class="md:col-span-7 bg-[#0B0E14]/90 border border-white/[0.07] rounded-3xl p-6 relative flex flex-col items-center justify-center min-h-[300px] overflow-hidden ring-1 ring-white/[0.03]">
+
+        <!-- Stage Header Toolbar -->
+        <div class="w-full flex items-center justify-between text-xs text-slate-400 border-b border-white/[0.06] pb-3 mb-5 lamp-toolbar">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" style="background-color: #FFFFFF;"></span>
+            <span id="lampStatusText" class="uppercase tracking-widest font-bold text-[11px] text-slate-300">ROOM OUTPUT</span>
+          </div>
+          <div class="flex items-center gap-2 lamp-toolbar-buttons">
+            <button onclick="sendSwapLR()" id="btnSwapLR" class="px-3 py-1.5 text-xs rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white font-semibold transition border border-white/[0.08] flex items-center gap-1.5 active:scale-95 shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+              <span>Swap L/R</span>
+            </button>
+            <button onclick="sendInvertTB()" id="btnInvertTB" class="px-3 py-1.5 text-xs rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white font-semibold transition border border-white/[0.08] flex items-center gap-1.5 active:scale-95 shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+              <span>Flip</span>
+            </button>
+            <button onclick="toggleSettingsModal(true)" class="px-2.5 py-1.5 text-xs rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 hover:text-white transition border border-white/[0.08] flex items-center gap-1.5 active:scale-95 shadow-sm" title="Configure Floor Lamp Arrangement & Settings">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              <span>Arrangement</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Visualizer Area -->
+        <div class="flex items-end justify-center gap-16 md:gap-24 w-full py-4 relative">
+          <!-- Floor Reflection Shadow -->
+          <div class="absolute bottom-1 w-4/5 h-8 bg-black/90 rounded-full blur-xl pointer-events-none"></div>
+
+          <!-- Lamp 1 (Left) -->
+          <div class="flex flex-col items-center gap-2.5 relative z-10">
+            <div class="relative w-24 h-[244px] flex flex-col items-center justify-end">
+              <!-- Floor Light Puddle -->
+              <div id="puddle1" class="lamp-floor-puddle"></div>
+              <!-- Diffused Wall Plume Glow -->
+              <div id="glow1" class="lamp-glow-eff"></div>
+              <!-- Cylindrical Lamp Tube -->
+              <div id="pole1" class="lamp-pole-eff">
+                <div class="lamp-cap"></div>
+                <div id="p1-s6" class="lamp-segment"></div>
+                <div id="p1-s5" class="lamp-segment"></div>
+                <div id="p1-s4" class="lamp-segment"></div>
+                <div id="p1-s3" class="lamp-segment"></div>
+                <div id="p1-s2" class="lamp-segment"></div>
+                <div id="p1-s1" class="lamp-segment"></div>
+                <div id="p1-s0" class="lamp-segment"></div>
+              </div>
+              <!-- Stem & Milled Aluminum Base -->
+              <div class="lamp-stem"></div>
+              <div class="lamp-base-pedestal"></div>
+            </div>
+            <div class="text-center mt-2 flex flex-col items-center gap-0.5">
+              <div class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--theme-accent);"></span>
+                <span id="badgeTitle1" class="text-xs font-bold text-white tracking-tight">Left Floor Lamp</span>
+              </div>
+              <div id="badgeHex1" class="text-[11px] font-mono text-slate-400">#Theme</div>
+            </div>
+          </div>
+
+          <!-- Lamp 2 (Right) -->
+          <div class="flex flex-col items-center gap-2.5 relative z-10">
+            <div class="relative w-24 h-[244px] flex flex-col items-center justify-end">
+              <!-- Floor Light Puddle -->
+              <div id="puddle2" class="lamp-floor-puddle"></div>
+              <!-- Diffused Wall Plume Glow -->
+              <div id="glow2" class="lamp-glow-eff"></div>
+              <!-- Cylindrical Lamp Tube -->
+              <div id="pole2" class="lamp-pole-eff">
+                <div class="lamp-cap"></div>
+                <div id="p2-s6" class="lamp-segment"></div>
+                <div id="p2-s5" class="lamp-segment"></div>
+                <div id="p2-s4" class="lamp-segment"></div>
+                <div id="p2-s3" class="lamp-segment"></div>
+                <div id="p2-s2" class="lamp-segment"></div>
+                <div id="p2-s1" class="lamp-segment"></div>
+                <div id="p2-s0" class="lamp-segment"></div>
+              </div>
+              <!-- Stem & Milled Aluminum Base -->
+              <div class="lamp-stem"></div>
+              <div class="lamp-base-pedestal"></div>
+            </div>
+            <div class="text-center mt-2 flex flex-col items-center gap-0.5">
+              <div class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--theme-accent);"></span>
+                <span id="badgeTitle2" class="text-xs font-bold text-white tracking-tight">Right Floor Lamp</span>
+              </div>
+              <div id="badgeHex2" class="text-[11px] font-mono text-slate-400">#Theme</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Mode Dock -->
+    <div class="mt-6 pt-5 border-t border-white/[0.08] grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div id="btnPresetSolid" onclick="applyPreset('solid')" class="p-3.5 rounded-2xl border flex flex-col items-start gap-1.5 cursor-pointer transition select-none mode-card mode-btn-active">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-lg flex items-center justify-center icon-container border">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg>
+          </span>
+          <span class="text-xs font-bold text-white title-span">Spotify Solid</span>
+        </div>
+        <span class="text-[11px] text-slate-400 leading-tight">Bold match • No shifting</span>
+      </div>
+
+      <div id="btnPresetWave" onclick="applyPreset('wave')" class="p-3.5 rounded-2xl border flex flex-col items-start gap-1.5 cursor-pointer transition select-none mode-card mode-btn-inactive">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-lg flex items-center justify-center icon-container border">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c3-4 6-4 9 0s6 4 9 0 6-4 9 0"/></svg>
+          </span>
+          <span class="text-xs font-bold text-white title-span">Ambient Wave</span>
+        </div>
+        <span class="text-[11px] text-slate-400 leading-tight">Liquid spectrum flow</span>
+      </div>
+
+      <div id="btnPresetDuo" onclick="applyPreset('duo')" class="p-3.5 rounded-2xl border flex flex-col items-start gap-1.5 cursor-pointer transition select-none mode-card mode-btn-inactive">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-lg flex items-center justify-center icon-container border">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="5.5" height="16" rx="2"/><rect x="13.5" y="4" width="5.5" height="16" rx="2" opacity="0.45"/></svg>
+          </span>
+          <span class="text-xs font-bold text-white title-span">Two-Lamp Split</span>
+        </div>
+        <span class="text-[11px] text-slate-400 leading-tight">Harmonic dual color</span>
+      </div>
+
+      <div id="btnPresetSeg" onclick="applyPreset('segmented')" class="p-3.5 rounded-2xl border flex flex-col items-start gap-1.5 cursor-pointer transition select-none mode-card mode-btn-inactive">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-lg flex items-center justify-center icon-container border">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="3" width="14" height="2" rx="1"/><rect x="5" y="6" width="14" height="2" rx="1" opacity="0.82"/><rect x="5" y="9" width="14" height="2" rx="1" opacity="0.68"/><rect x="5" y="12" width="14" height="2" rx="1" opacity="0.54"/><rect x="5" y="15" width="14" height="2" rx="1" opacity="0.40"/><rect x="5" y="18" width="14" height="2" rx="1" opacity="0.28"/></svg>
+          </span>
+          <span class="text-xs font-bold text-white title-span">7-Zone Fade</span>
+        </div>
+        <span class="text-[11px] text-slate-400 leading-tight">Vertical pole gradient</span>
+      </div>
+    </div>
+
+    <!-- Quick Slider & Pulse Controls Strip -->
+    <div class="mt-5 pt-4 border-t border-white/[0.06] flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+      <div class="flex items-center gap-3.5 w-full md:w-5/12 bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.05]">
+        <span class="text-slate-400 font-semibold whitespace-nowrap">Brightness: <span id="bVal" class="text-white font-mono font-bold">100%</span></span>
+        <input type="range" id="bSlider" min="1" max="100" value="100" oninput="sendBrightness(this.value)" class="w-full cursor-pointer">
+      </div>
+
+      <div class="flex items-center justify-end gap-4 w-full md:w-7/12 flex-wrap">
+        <!-- BPM Pulse Switch -->
+        <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition select-none">
+          <span class="switch-toggle">
+            <input type="checkbox" id="pulseCheck" onchange="togglePulse(this.checked)">
+            <span class="switch-slider"></span>
+          </span>
+          <span class="font-semibold whitespace-nowrap">BPM Pulse</span>
+        </label>
+
+        <!-- Dynamic Drop Switch -->
+        <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition select-none">
+          <span class="switch-toggle">
+            <input type="checkbox" id="intensityCheck" onchange="toggleIntensity(this.checked)">
+            <span class="switch-slider"></span>
+          </span>
+          <span class="font-semibold whitespace-nowrap">Dynamic Drop / Energy</span>
+        </label>
+
+        <!-- Drop Energy Badge -->
+        <span id="intensityBadge" class="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg hidden whitespace-nowrap shadow-sm transition-all duration-500" style="color: #FFFFFF; background-color: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22);">Chorus Drop • 100%</span>
+
+        <!-- Rescan Button -->
+        <button onclick="sendRescan()" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white transition border border-white/[0.08] active:scale-95 flex items-center gap-1.5 shadow-sm">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Rescan
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- App Settings Modal (Lamp Arrangement & Hardware Config) -->
+  <div id="settingsModal" onclick="if(event.target === this) toggleSettingsModal(false)" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300 opacity-0 pointer-events-none">
+    <div id="settingsModalCard" class="w-full max-w-2xl max-h-[94vh] flex flex-col bg-[#141822] border border-white/[0.12] rounded-3xl p-5 md:p-6 shadow-2xl relative overflow-hidden ring-1 ring-white/[0.08] transform scale-95 transition-all duration-300">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-4">
+        <div>
+          <div class="text-base font-bold text-white tracking-tight">Settings</div>
+          <div class="text-xs text-slate-400">Changes save automatically</div>
+        </div>
+        <button onclick="toggleSettingsModal(false)" class="w-8 h-8 rounded-full bg-white/[0.06] hover:bg-white/[0.14] text-slate-400 hover:text-white transition flex items-center justify-center text-sm active:scale-90 border border-white/[0.08]" title="Close (Esc)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="flex flex-col gap-3 text-xs overflow-y-auto min-h-0 -mr-2 pr-2">
+
+        <!-- Colours -->
+        <section class="st-section">
+          <div class="st-title">Colours</div>
+          <div class="st-row">
+            <div class="st-label">Vibrancy <span id="vibVal" class="st-val">1.15×</span></div>
+            <input type="range" id="vibSlider" min="0.7" max="1.8" step="0.05" value="1.15" oninput="onSetting('vibVal', parseFloat(this.value).toFixed(2) + '×'); sendSetting('/api/vibrancy', {value: parseFloat(this.value)}, 250)">
+          </div>
+          <div class="st-row">
+            <div class="st-label">Dark colour boost <span id="darkVal" class="st-val">65%</span></div>
+            <input type="range" id="darkSlider" min="0" max="100" step="5" value="65" oninput="onSetting('darkVal', this.value + '%'); sendSetting('/api/dark_boost', {value: parseInt(this.value) / 100}, 150)">
+          </div>
+          <p class="st-hint">Brightens dark album colours so the lamps can show them. Lower it if reds look pink.</p>
+          <label class="st-row cursor-pointer">
+            <div class="st-label st-label-wide">White accents from the cover</div>
+            <span class="switch-toggle"><input type="checkbox" id="whiteAccentCheck" onchange="fetch('/api/white_accent', { method: 'POST', body: JSON.stringify({ enabled: this.checked }) })"><span class="switch-slider"></span></span>
+          </label>
+        </section>
+
+        <!-- Motion -->
+        <section class="st-section">
+          <div class="st-title">Motion</div>
+          <div class="st-row">
+            <div class="st-label">Colour cycle <span id="flowVal" class="st-val">5s</span></div>
+            <input type="range" id="flowSlider" min="2.5" max="20" step="0.5" value="5" oninput="onSetting('flowVal', this.value + 's'); sendSetting('/api/flow_speed', {speed: parseFloat(this.value)})">
+          </div>
+          <div class="st-row">
+            <div class="st-label">Song fade <span id="transVal" class="st-val">3s</span></div>
+            <input type="range" id="transSlider" min="1" max="8" step="0.5" value="3" oninput="onSetting('transVal', this.value + 's'); sendSetting('/api/trans_speed', {speed: parseFloat(this.value)})">
+          </div>
+          <div class="st-row">
+            <div class="st-label">Full-screen motion <span id="fsMotionVal" class="st-val">Very slow</span></div>
+            <input type="range" id="fsMotionSlider" min="0" max="5" step="1" value="1" oninput="onSetting('fsMotionVal', FS_MOTION_NAMES[this.value]); applyFsMotion(+this.value); sendSetting('/api/fs_motion', {value: parseInt(this.value)}, 150)">
+          </div>
+          <p class="st-hint">Colour cycle sets the speed of Ambient Wave and 7-Zone Fade. Song fade is how long lamps take to change to a new song.</p>
+        </section>
+
+        <!-- Beat pulse -->
+        <section class="st-section">
+          <div class="st-title">Beat pulse</div>
+          <div class="st-row">
+            <div class="st-label">Pulse depth <span id="depthVal" class="st-val">60%</span></div>
+            <input type="range" id="depthSlider" min="10" max="90" step="5" value="60" oninput="onSetting('depthVal', this.value + '%'); sendSetting('/api/pulse_depth', {depth: parseInt(this.value) / 100})">
+          </div>
+          <div class="st-row">
+            <div class="st-label">Tempo <span id="bpmVal" class="st-val">120</span></div>
+            <input type="range" id="bpmSlider" min="40" max="240" step="1" value="120" oninput="onSetting('bpmVal', this.value); sendSetting('/api/bpm', {bpm: parseFloat(this.value)})">
+            <button onclick="tapTempo()" id="btnTap" class="st-btn" title="Tap along with the beat (4+ taps)">Tap</button>
+            <button onclick="sendBpmAuto()" id="btnBpmAuto" class="st-btn" title="Use the song's own tempo">Auto</button>
+          </div>
+          <p class="st-hint" id="bpmSourceText">Tempo source: —</p>
+        </section>
+
+        <!-- Lamps -->
+        <section class="st-section">
+          <div class="st-title">Lamps</div>
+          <div class="st-row">
+            <div class="st-label">Left lamp</div>
+            <div class="st-grow"></div>
+            <div class="relative">
+              <select id="selectLampLeft" onchange="onAssignLamp('left', this.value)" class="bg-[#0E1117] text-xs font-mono text-slate-200 border border-white/15 hover:border-white/30 rounded-xl pl-2.5 pr-6 py-1.5 outline-none transition cursor-pointer appearance-none shadow-sm"></select>
+              <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[9px]">▼</div>
+            </div>
+            <button onclick="onIdentifyLamp('left')" class="st-btn" title="Blink this lamp cyan"><svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zm-2 18h4c0 .55-.45 1-1 1h-2c-.55 0-1-.45-1-1z"/></svg> Blink</button>
+          </div>
+          <div class="st-row">
+            <div class="st-label">Right lamp</div>
+            <div class="st-grow"></div>
+            <div class="relative">
+              <select id="selectLampRight" onchange="onAssignLamp('right', this.value)" class="bg-[#0E1117] text-xs font-mono text-slate-200 border border-white/15 hover:border-white/30 rounded-xl pl-2.5 pr-6 py-1.5 outline-none transition cursor-pointer appearance-none shadow-sm"></select>
+              <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[9px]">▼</div>
+            </div>
+            <button onclick="onIdentifyLamp('right')" class="st-btn" title="Blink this lamp cyan"><svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zm-2 18h4c0 .55-.45 1-1 1h-2c-.55 0-1-.45-1-1z"/></svg> Blink</button>
+          </div>
+          <div class="st-actions">
+            <button onclick="sendSwapLR()" id="btnModalSwapLR" class="st-btn">Swap left / right</button>
+            <button onclick="sendInvertTB()" id="btnModalInvertTB" class="st-btn">Flip top / bottom</button>
+            <button onclick="sendRescan()" class="st-btn">Find lamps</button>
+          </div>
+          <p class="st-hint">Use Blink to see which lamp is which. During ads both lamps turn white.</p>
+        </section>
+
+        <!-- Display -->
+        <section class="st-section">
+          <div class="st-title">On-screen lamp preview</div>
+          <div class="st-row">
+            <div class="flex bg-black/30 rounded-lg p-0.5 border border-white/[0.06] text-xs">
+              <button id="btnPrevSmooth" onclick="setPreviewMode('smooth')" class="px-3 py-1 rounded-md font-semibold transition text-slate-400">Smooth</button>
+              <button id="btnPrevLow" onclick="setPreviewMode('low')" class="px-3 py-1 rounded-md font-semibold transition text-slate-400">Low power</button>
+              <button id="btnPrevOff" onclick="setPreviewMode('off')" class="px-3 py-1 rounded-md font-semibold transition text-slate-400">Off</button>
+            </div>
+          </div>
+          <p class="st-hint">Only changes the preview on this screen, not your real lamps.</p>
+        </section>
+
+        <!-- Other lights -->
+        <section class="st-section" id="devicesSection">
+          <div class="st-row st-row-first">
+            <div>
+              <div class="text-white font-semibold">Other lights <span class="text-[10px] font-mono text-amber-300/90 ml-1">EXPERIMENTAL</span></div>
+              <div class="st-hint" style="margin:2px 0 0">Also light up WiZ, LIFX or WLED lights from a lamp's colours. Written from the products' published protocols but not yet tried on real hardware: tell us if one works or doesn't.</div>
+            </div>
+            <div class="st-grow"></div>
+            <button onclick="scanDevices()" id="devScanBtn" class="st-btn">Scan</button>
+          </div>
+          <div id="devList" class="flex flex-col gap-1.5 mt-2"></div>
+          <div class="st-row" style="flex-wrap:wrap;gap:6px">
+            <select id="devKind" class="st-btn" style="background:rgba(255,255,255,.06)">
+              <option value="wiz">WiZ</option><option value="lifx">LIFX</option><option value="wled">WLED strip</option>
+            </select>
+            <input id="devIp" placeholder="192.168.1.x" class="st-grow" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 8px;color:#cbd5e1;font-size:11px;font-family:ui-monospace,monospace;min-width:110px">
+            <select id="devSide" class="st-btn" style="background:rgba(255,255,255,.06)">
+              <option value="left">Follows left lamp</option><option value="right">Follows right lamp</option>
+            </select>
+            <button onclick="addDevice()" class="st-btn">Add</button>
+          </div>
+          <div id="devMsg" class="st-hint" style="margin:4px 0 0"></div>
+        </section>
+
+        <!-- Phone & tablet access -->
+        <section class="st-section" id="pairSection" style="display:none">
+          <div class="st-row st-row-first">
+            <div>
+              <div class="text-white font-semibold">Phone &amp; tablet access</div>
+              <div class="st-hint" style="margin:2px 0 0">Open this link once on each device (same Wi-Fi) to use the dashboard there. Keep it private.</div>
+            </div>
+          </div>
+          <div class="st-row">
+            <input id="pairLink" readonly class="st-grow" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 8px;color:#cbd5e1;font-size:11px;font-family:ui-monospace,monospace;min-width:0" onclick="this.select()">
+            <button onclick="copyPairLink()" class="st-btn" id="pairCopy">Copy</button>
+          </div>
+        </section>
+
+        <!-- Server -->
+        <section class="st-section">
+          <div class="st-row st-row-first">
+            <div>
+              <div class="text-white font-semibold">Shut down</div>
+              <div class="st-hint" style="margin:2px 0 0">Stops syncing and closes the app on your Mac.</div>
+            </div>
+            <div class="st-grow"></div>
+            <button onclick="shutdownServer()" class="st-btn st-btn-danger">Shut down</button>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-4 pt-4 border-t border-white/[0.08] flex items-center justify-between">
+        <span class="text-[11px] text-slate-500 font-mono">Glowtrack v3</span>
+        <button onclick="toggleSettingsModal(false)" class="px-5 py-2 rounded-xl text-xs font-bold transition shadow-md hover:brightness-110 active:scale-95" style="background-color: var(--ctl); color: var(--ctl-text);">Done</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Full-screen "now playing" view. Tap/click anywhere to show the controls. -->
+  <div id="fsView" class="fs-view" aria-hidden="true" onclick="fsTap(event)">
+    <div id="fsBgA" class="fs-bg" style="opacity:1"></div>
+    <div id="fsBgB" class="fs-bg" style="opacity:0"></div>
+    <!-- Drifting album-colour blobs (one GPU animation each; speed set in Settings) -->
+    <div id="fsBlobs" class="fs-blobs">
+      <div class="fs-blob fs-b1"></div>
+      <div class="fs-blob fs-b2"></div>
+      <div class="fs-blob fs-b3"></div>
+    </div>
+    <div class="fs-shade"></div>
+    <div class="fs-art-wrap"><div id="fsArtBox" class="fs-art-box"><img id="fsArt" class="fs-art" alt="Album cover"></div></div>
+    <!-- Lyrics mode: the cover slides left and synced lyrics scroll on the right -->
+    <div id="fsLyrics" class="fs-lyrics" aria-live="off">
+      <div id="fsLyricsList" class="fs-lyrics-list"></div>
+      <div id="fsLyricsMsg" class="fs-lyrics-msg"></div>
+    </div>
+    <div class="fs-meta">
+      <div id="fsTitle" class="fs-title"></div>
+      <div id="fsArtist" class="fs-artist"></div>
+    </div>
+    <div class="fs-controls">
+      <button class="fs-lyrics-btn fs-settings-btn" onclick="event.stopPropagation(); toggleSettingsModal(true)" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button id="fsLyricsBtn" class="fs-lyrics-btn" onclick="event.stopPropagation(); toggleLyrics(); fsShowControls()" title="Lyrics (L)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h11M4 11h11M4 16h7"/><circle cx="18" cy="17" r="2.2"/><path d="M20.2 17V7.5l-3 1"/></svg>
+      </button>
+      <button class="fs-exit" onclick="event.stopPropagation(); exitFullscreen()" title="Exit full screen (Esc)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+      </button>
+      <div class="fs-bottom" onclick="event.stopPropagation(); fsShowControls()">
+        <div class="fs-progress-row">
+          <span id="fsElapsed">0:00</span>
+          <div id="fsScrub" class="fs-scrub" title="Drag to move through the song">
+            <div class="fs-progress"><div id="fsProgressBar" class="fs-progress-bar"></div></div>
+            <div id="fsThumb" class="fs-thumb"></div>
+          </div>
+          <span id="fsTotal">0:00</span>
+        </div>
+        <div class="fs-buttons">
+          <button onclick="toggleShuffle()" title="Shuffle" class="fs-toggle js-shuffle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button>
+          <button onclick="sendPlayback('prev')" title="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+          <button onclick="sendPlayback('playpause')" class="fs-play" title="Play / Pause">
+            <svg class="fs-icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="fs-icon-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+          <button onclick="sendPlayback('next')" title="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+          <button onclick="toggleRepeat()" title="Repeat" class="fs-toggle js-repeat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button>
+        </div>
+        <div class="fs-volume">
+          <button class="vol-icon" onclick="toggleMute()" title="Mute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="vol-wave" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button>
+          <input type="range" id="fsVolSlider" class="vol-slider js-vol" min="0" max="100" step="1" value="50" oninput="onVolume(this)" aria-label="Spotify volume">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
