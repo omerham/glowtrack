@@ -555,6 +555,13 @@
   function seekTo(sec) { var s = T.s; if (!s) return; sec = Math.max(0, sec); T.basePos = sec; T.tState = performance.now(); api('/api/playback/seek', { pos: sec }); secTick(); }
   function loadPair() { fetch('/api/pairing').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { if (d) { T.pair = d.open ? '' : d.url; q('[data-pairlink]').forEach(function (i) { i.value = T.pair || 'Pairing is switched off on this Mac'; }); } }).catch(function () {}); }
   function msg(t) { q('[data-b="devmsg"]').forEach(function (e) { e.textContent = t || ''; }); }
+  function showStopped() {          // like the classic dashboard: say it stopped, and come back by itself
+    var o = document.createElement('div');
+    o.style.cssText = 'position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(8,8,10,.94);color:#f3f1ec;font:500 15px/1.5 "Instrument Sans",sans-serif;text-align:center;padding:24px';
+    o.innerHTML = '<div><div style="font:800 24px Syne,sans-serif;margin-bottom:8px">Server stopped</div><div style="opacity:.7">To start it again, open Glowtrack on your Mac.<br>This page reconnects by itself when it is back.</div></div>';
+    root.appendChild(o);
+    var timer = setInterval(function () { fetch('/api/state', { cache: 'no-store' }).then(function (r) { if (r.ok) { clearInterval(timer); location.reload(); } }).catch(function () {}); }, 5000);
+  }
   function act(name, el) {
     var s = T.s;
     switch (name) {
@@ -576,8 +583,8 @@
       case 'rmdev': api('/api/devices/remove', { ip: el.getAttribute('data-ip') }); break;
       case 'copylink': { var inp = root.querySelector('[data-pairlink]'); if (inp) { inp.select(); try { if (navigator.clipboard) navigator.clipboard.writeText(inp.value); else document.execCommand('copy'); } catch (e) { try { document.execCommand('copy'); } catch (e2) {} } } break; }
       case 'shutdown':
-        if (!T.confirm) { T.confirm = true; paint(); setTimeout(function () { T.confirm = false; paint(); }, 4000); }
-        else { api('/api/shutdown', { lamps_off: false }); T.confirm = false; }
+        if (!T.confirm) { T.confirm = true; T.confirmAt = performance.now(); paint(); setTimeout(function () { T.confirm = false; paint(); }, 4000); }
+        else if (performance.now() - T.confirmAt > 700) { api('/api/shutdown', { lamps_off: false }); T.confirm = false; showStopped(); }   // a quick double-click must not shut it down
         break;
     }
   }

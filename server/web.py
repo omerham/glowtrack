@@ -76,6 +76,11 @@ STATIC_FILES = {
     "/manifest.webmanifest": "application/manifest+json",
     "/icon-180.png": "image/png",
     "/icon-512.png": "image/png",
+    "/icon-192.png": "image/png",
+    "/icon-maskable-512.png": "image/png",
+    "/favicon-32.png": "image/png",
+    "/favicon.ico": "image/x-icon",
+    "/favicon.svg": "image/svg+xml",
 }
 
 

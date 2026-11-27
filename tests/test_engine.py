@@ -667,6 +667,21 @@ class ThemeSupportTest(unittest.TestCase):
         self.assertIn('id="themeRoot"', html)
 
 
+class IconTest(unittest.TestCase):
+    def test_every_icon_is_served_and_present(self):
+        import json
+        import web
+        man = json.load(open(os.path.join(web.WEB_DIR, "manifest.webmanifest")))
+        paths = {i["src"] for i in man["icons"]} | {"/favicon.ico", "/favicon-32.png", "/favicon.svg", "/icon-180.png"}
+        for p in paths:
+            self.assertIn(p, web.STATIC_FILES, p)
+            self.assertTrue(os.path.exists(os.path.join(web.WEB_DIR, p.lstrip("/"))), p)
+        self.assertTrue(any(i.get("purpose") == "maskable" for i in man["icons"]))
+        html = open(os.path.join(web.WEB_DIR, "index.html")).read()
+        for needle in ('href="/favicon.svg"', 'href="/favicon.ico"', 'href="/icon-180.png"'):
+            self.assertIn(needle, html)
+
+
 class FakeRequest:
     """Just enough of an HTTP handler to test the access checks."""
     def __init__(self, handler_cls, client_ip="192.168.1.50", headers=None):

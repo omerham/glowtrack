@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Draws the Glowtrack app icon and writes mac/AppIcon.icns (plus the dashboard's web icons).
+"""Draws the Glowtrack app icon and writes every size it is needed at: the Mac app icon (.icns) and the
+web icons (home-screen, installable-app, maskable, favicon .ico/.png/.svg).
 
     /usr/bin/python3 mac/make_icon.py
 
@@ -21,6 +22,10 @@ S = 2048                                   # draw big, shrink for crisp edges
 
 # bottom (zone 1) to top (zone 7)
 FLOW = [(214, 40, 57), (246, 79, 52), (255, 122, 48), (255, 168, 46), (255, 202, 84), (255, 226, 150), (255, 244, 214)]
+
+
+FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#D62839"/><stop offset=".25" stop-color="#FF7A30"/><stop offset=".5" stop-color="#FFA82E"/><stop offset=".75" stop-color="#FFE296"/><stop offset="1" stop-color="#FFF4D6"/></linearGradient><radialGradient id="p"><stop offset="0" stop-color="#FF4F34" stop-opacity=".55"/><stop offset="1" stop-color="#FF4F34" stop-opacity="0"/></radialGradient></defs><rect width="64" height="64" rx="14" fill="#17110F"/><ellipse cx="22" cy="50" rx="14" ry="6" fill="url(#p)"/><ellipse cx="42" cy="50" rx="14" ry="6" fill="url(#p)"/><rect x="17.5" y="9" width="9" height="40" rx="4.5" fill="url(#g)"/><rect x="37.5" y="9" width="9" height="40" rx="4.5" fill="url(#g)"/></svg>
+"""
 
 
 def squircle_mask(size, body):
@@ -117,8 +122,21 @@ def main():
             icon.resize((px, px), Image.LANCZOS).save(os.path.join(iconset, name))
     subprocess.run(["iconutil", "-c", "icns", iconset, "-o", os.path.join(HERE, "AppIcon.icns")], check=True)
     icon.resize((1024, 1024), Image.LANCZOS).save(os.path.join(tmp, "preview.png"))
-    for size, name in ((180, "icon-180.png"), (512, "icon-512.png")):      # dashboard / home-screen icons: square, full bleed
+    for size, name in ((180, "icon-180.png"), (192, "icon-192.png"), (512, "icon-512.png")):      # square, full bleed, no transparency
         flat.convert("RGB").resize((size, size), Image.LANCZOS).save(os.path.join(WEB, name))
+    # maskable: Android/Chrome crop it to any shape, so the art stays inside the central 80% on a solid ground
+    mask_canvas = Image.new("RGB", (512, 512))
+    md = ImageDraw.Draw(mask_canvas)
+    for y in range(512):                                   # same warm gradient as the art, carried out to the edges
+        t = min(1.0, max(0.0, (y - 51) / 410.0))
+        md.line([(0, y), (512, y)], fill=(int(34 - 20 * t), int(25 - 15 * t), int(22 - 13 * t)))
+    mask_canvas.paste(flat.convert("RGB").resize((410, 410), Image.LANCZOS), (51, 51))
+    mask_canvas.save(os.path.join(WEB, "icon-maskable-512.png"))
+    fav = icon.resize((256, 256), Image.LANCZOS)
+    fav.resize((32, 32), Image.LANCZOS).save(os.path.join(WEB, "favicon-32.png"))
+    fav.save(os.path.join(WEB, "favicon.ico"), sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
+    with open(os.path.join(WEB, "favicon.svg"), "w") as f:
+        f.write(FAVICON_SVG)
     shutil.copy(os.path.join(tmp, "preview.png"), os.path.join(HERE, "icon-preview.png"))
     if os.environ.get("ICON_SHEET"):
         sheet = Image.new("RGBA", (400, 140), (200, 200, 200, 255))
