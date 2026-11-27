@@ -1,44 +1,64 @@
 # Glowtrack
 
-Syncs two Govee floor lamps (H6076) to whatever is playing on this Mac - Spotify,
-Apple Music, YouTube Music or any other site/app, Tidal, Amazon Music, Deezer and so on.
-Colours come from the album art. Everything stays on your Wi-Fi, and it
-works with a free Spotify account.
+Your smart lights follow the album art of whatever is playing on your Mac: Spotify, Apple Music,
+YouTube Music, Tidal, Amazon Music, Deezer, a browser tab, anything that shows up in macOS
+Now Playing. Built for **Govee floor lamps**, with experimental support for **WiZ, LIFX and WLED** lights.
+Everything stays on your Wi-Fi, there is no account, and it works with a free Spotify account.
+
+### [Download for Mac](https://github.com/omerham/glowtrack/releases/latest)
+
+Pick the look you want. They are all the same app, and you can switch any time in Settings, Design.
+
+| Download | Design |
+|---|---|
+| [Glowtrack-a.zip](https://github.com/omerham/glowtrack/releases/latest/download/Glowtrack-a.zip) | **A, Instrument**: a hardware panel with keys, a knob and LED bars |
+| [Glowtrack-b.zip](https://github.com/omerham/glowtrack/releases/latest/download/Glowtrack-b.zip) | **B, Dot**: dot-matrix type, the lamps drawn in dots |
+| [Glowtrack-c.zip](https://github.com/omerham/glowtrack/releases/latest/download/Glowtrack-c.zip) | **C, Poster**: flat colour blocks and huge condensed type |
+| [Glowtrack-d.zip](https://github.com/omerham/glowtrack/releases/latest/download/Glowtrack-d.zip) | **D, Stage**: the framed cover over a living, drifting background |
+| [Glowtrack-classic.zip](https://github.com/omerham/glowtrack/releases/latest/download/Glowtrack-classic.zip) | **Classic**: the original dashboard |
 
 ![The Glowtrack dashboard](docs/screenshot.png)
 
 > Unofficial hobby project. Not affiliated with or endorsed by Govee or Spotify.
 
-## Requirements
+## Get started (about two minutes)
 
-- A Mac running macOS 13 or later, playing music in any app or browser tab
-  (the Spotify desktop app works with a free account).
-- One or two **Govee H6076 floor lamps** (other Govee lamps with LAN control may work
-  but are untested), on the same Wi-Fi as the Mac.
-- **LAN Control turned on** for each lamp: Govee Home app → the lamp → Settings → LAN Control.
-- `/usr/bin/python3` (ships with the Xcode command-line tools) and Pillow
-  (`/usr/bin/python3 -m pip install --user Pillow`).
-- Xcode command-line tools (`xcode-select --install`): to build the menu-bar app, and so
-  the server can build its small Now Playing helper the first time it runs.
+1. **Turn on LAN Control** for each lamp: Govee Home app, the lamp, Settings, LAN Control.
+   (Without this the lamps cannot hear the Mac.)
+2. **Download** a zip above and unzip it. Drag **Glowtrack** into your Applications folder.
+3. **Open it the first time with right-click, then Open.** The app is not notarised by Apple,
+   so a double-click shows "can't be opened". Right-click, Open, Open is a one-time step.
+   (If you only see "Move to Bin", go to System Settings, Privacy & Security and choose *Open Anyway*.)
+4. If macOS offers to install the **command-line developer tools**, say yes: it provides the Python
+   that runs the lighting server. Allow the permission prompts for controlling Spotify and for the local network.
+5. Play a song. The lamps are found automatically, and Glowtrack lives in your menu bar.
+   To change the design, open the dashboard from the menu bar and go to Settings, Design.
 
-## Install
+**Needs:** an Apple silicon Mac (M1 or later) with macOS 13 or later, and one or two Govee H6076
+floor lamps on the same Wi-Fi as the Mac. Other Govee lamps with LAN control may work but are untested.
+
+Something not working, or it worked great? Use **Report a problem** in Settings or the menu bar.
+
+## Build from source
+
+For developers. (The build script targets Apple silicon; change `-target` in `mac/build.sh` to build for Intel, untested.) You need Xcode command-line tools (`xcode-select --install`) and Pillow
+(`/usr/bin/python3 -m pip install --user Pillow`).
 
 ```
-git clone <this repo> ~/GoveeSpotifySync
+git clone https://github.com/omerham/glowtrack.git ~/GoveeSpotifySync
 cd ~/GoveeSpotifySync
 mac/build.sh
 cp -R build/Glowtrack.app /Applications/
 ```
 
-The app expects the server at `~/GoveeSpotifySync/server/app.py`; to keep the
+The built app expects the server at `~/GoveeSpotifySync/server/app.py`; to keep the
 code elsewhere, change `GoveeServerPath` in `mac/Info.plist` before building.
 You can also run just the server: `/usr/bin/python3 server/app.py`.
-Lamps are found automatically; if they aren't, use the dashboard's lamp settings.
-The first launch asks for permission to control Spotify and to use the local network.
+`mac/build.sh --dist` builds the self-contained downloads (one per design) in `build/dist`.
 
 ## Using it
 
-- **Glowtrack** (in Applications) lives in the menu bar (lightbulb icon).
+- **Glowtrack** (in Applications) lives in the menu bar.
   From there: open the dashboard, switch mode, brightness, play/pause, next track,
   *Open at Login*, restart the lighting server, quit.
 - Dashboard: <http://127.0.0.1:8765> on this Mac. Phones/iPads on the same Wi-Fi can use it too
@@ -133,14 +153,6 @@ CPU: the page is built once per screen, only the lamp colours change on a timer 
 second while the lamps move, slower on "Low power", not at all when the lamp preview is off, the
 window is hidden or the lamps are still), and the clock and lyrics tick once a second.
 In Full Screen the controls fade away after a few seconds and the song (or lyrics) stays.
-
-## Downloads
-
-`mac/build.sh --dist` builds self-contained apps, one per design, in `build/dist`
-(`Glowtrack-classic.zip`, `-a`, `-b`, `-c`, `-d`). Each carries its own server, Pillow and the
-Now Playing helper and starts on its design (you can still change it in Settings). They are
-not notarised: right-click → Open the first time. They need `/usr/bin/python3` (macOS asks to
-install the command-line tools if it is missing) and were built for Apple silicon.
 
 ## Which players work
 
