@@ -143,7 +143,28 @@ function anchorProgress() {
 }
 let lastArtSig = '';
 
+// Update notice (Settings): says whether a newer release exists and links to it; never installs anything
+function updateStatusText(s) {
+  if (s.update_available) return 'Version ' + s.update_version + ' is available (you have ' + s.version + ').';
+  if (s.update_checked_at) return 'You have the newest version (' + s.version + ').';
+  return s.check_updates === false ? 'Automatic checks are off. You have version ' + s.version + '.' : 'Version ' + s.version + '. Not checked yet.';
+}
+function renderUpdate(s) {
+  const t = document.getElementById('updText');
+  if (!t) return;
+  t.textContent = updateStatusText(s);
+  const b = document.getElementById('updBtn');
+  if (b) b.textContent = s.update_available ? 'Download' : 'Check now';
+  const c = document.getElementById('updAutoCheck');
+  if (c && document.activeElement !== c) c.checked = s.check_updates !== false;
+}
+function updateAction() {
+  if (currentState && currentState.update_available) window.open(currentState.update_url, '_blank', 'noopener');
+  else post('/api/updates/check', {});
+}
+
 function updateUI(s) {
+  renderUpdate(s);
   // Page accent comes from the album palette (not the moving lamp frame),
   // so the whole page isn't repainted 3x a second while colours flow.
   const pal = s.palette_lamp || [];
@@ -180,6 +201,10 @@ function updateUI(s) {
     const label = (s.online_count === total) ? `${total} Govee Lamps Online` : `${s.online_count} of ${total} Lamps Online`;
     badgeHtml = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ${label}`;
     badgeCls = 'text-xs text-slate-400 mt-0.5 font-medium flex items-center gap-1.5';
+  } else if (total === 0) {
+    badgeHtml = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400"></span> No Govee lamps found yet`;
+    badgeTitle = 'Turn on LAN Control for each lamp in the Govee Home app, keep the Mac and lamps on the same Wi-Fi, then press Rescan.';
+    badgeCls = 'text-xs text-amber-300 mt-0.5 font-medium flex items-center gap-1.5';
   } else {
     badgeHtml = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-red-500"></span> Lamps Not Responding`;
     badgeTitle = 'No reply from the lamps. Are you on the same Wi-Fi?';

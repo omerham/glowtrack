@@ -455,6 +455,7 @@
             <button onclick="sendRescan()" class="st-btn">Find lamps</button>
           </div>
           <p class="st-hint">Use Blink to see which lamp is which. During ads both lamps turn white.</p>
+          <p class="st-hint"><b>Lamps not showing?</b> In the Govee Home app turn on <b>LAN Control</b> for each lamp (lamp, Settings, LAN Control), keep the Mac and the lamps on the same Wi-Fi (not a guest network), then press Find lamps.</p>
         </section>
 
         <!-- Display -->
@@ -523,6 +524,23 @@
             <input id="pairLink" readonly class="st-grow" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 8px;color:#cbd5e1;font-size:11px;font-family:ui-monospace,monospace;min-width:0" onclick="this.select()">
             <button onclick="copyPairLink()" class="st-btn" id="pairCopy">Copy</button>
           </div>
+        </section>
+
+        <!-- Updates -->
+        <section class="st-section">
+          <div class="st-row st-row-first">
+            <div>
+              <div class="text-white font-semibold">Updates</div>
+              <div id="updText" class="st-hint" style="margin:2px 0 0">Not checked yet.</div>
+            </div>
+            <div class="st-grow"></div>
+            <button id="updBtn" onclick="updateAction()" class="st-btn">Check now</button>
+          </div>
+          <label class="st-row cursor-pointer">
+            <div class="st-label st-label-wide">Check for updates once a day</div>
+            <span class="switch-toggle"><input type="checkbox" id="updAutoCheck" onchange="fetch('/api/updates/auto', { method: 'POST', body: JSON.stringify({ enabled: this.checked }) })"><span class="switch-slider"></span></span>
+          </label>
+          <p class="st-hint">Asks GitHub for the newest release. Nothing about you, your lamps or your music is sent, and nothing is installed for you.</p>
         </section>
 
         <!-- Help -->

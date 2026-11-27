@@ -9,6 +9,7 @@ import zlib
 from colors import (blend_colours, build_7_zone_palette, extract_spotify_palette, flow_gradient,
                     get_dual_split_colors, led_finish, lift_frame, sample_palette_continuous)
 from config import AD_WHITE, DEFAULT_THEME, STARTUP_PALETTE, TARGET_IPS, VERSION, clamp, load_config, save_config
+import updates
 import devices
 from lamps import GoveeController
 import players
@@ -126,6 +127,10 @@ class AppState:
         self.is_swapped_lr = bool(cfg.get("is_swapped_lr", False))
         self.is_inverted_tb = bool(cfg.get("is_inverted_tb", False))
         self.music_pulse_enabled = bool(cfg.get("music_pulse", False))
+        self.check_updates = bool(cfg.get("check_updates", True))
+        self.update_latest = ""         # newest released version found, "" until a check has worked
+        self.update_url = updates.RELEASES_PAGE
+        self.update_checked_at = 0.0
         self.dynamic_intensity_enabled = bool(cfg.get("dynamic_intensity", False))
         self.dark_boost = _f("dark_boost", 0.65, 0.0, 1.0)     # lift for colours LEDs can't show
         self.preview_mode = cfg.get("preview_mode") if cfg.get("preview_mode") in PREVIEW_MODES else "smooth"
@@ -264,6 +269,7 @@ class AppState:
             "is_swapped_lr": self.is_swapped_lr,
             "is_inverted_tb": self.is_inverted_tb,
             "music_pulse": self.music_pulse_enabled,
+            "check_updates": self.check_updates,
             "dynamic_intensity": self.dynamic_intensity_enabled,
             "dark_boost": self.dark_boost,
             "preview_mode": self.preview_mode,
@@ -363,6 +369,40 @@ class AppState:
         self.out_frame = None
         self.request_update(0)
         self.broadcast()
+
+    # ------------------------------------------------------------------
+    # Update notice
+    # ------------------------------------------------------------------
+    def check_for_update(self, force=False):
+        """Asks GitHub for the newest release (at most once a day unless forced). Returns True if it answered."""
+        if not (self.check_updates or force):
+            return False
+        if not force and time.time() - self.update_checked_at < 20 * 3600:
+            return True
+        found = updates.fetch_latest()
+        if not found:
+            return False
+        self.update_latest, self.update_url = found
+        self.update_checked_at = time.time()
+        self.broadcast()
+        return True
+
+    def update_check_loop(self):
+        """Background: one quiet check shortly after start, then about every six hours while it is on."""
+        time.sleep(20)
+        while self.is_running:
+            try:
+                self.check_for_update()
+            except Exception as e:
+                print(f"[!] Update check failed: {e}")
+            time.sleep(6 * 3600)
+
+    def set_check_updates(self, on):
+        self.check_updates = bool(on)
+        self.save_config()
+        self.broadcast()
+        if on:
+            threading.Thread(target=self.check_for_update, daemon=True).start()
 
     def update_device(self, ip, name=None, side=None):
         """Renames a light and/or moves it to follow the other lamp."""
@@ -761,6 +801,11 @@ class AppState:
             "trans_speed": self.trans_speed,
             "vibrancy": self.vibrancy,
             "version": VERSION,
+            "update_available": updates.is_newer(self.update_latest, VERSION),
+            "update_version": self.update_latest,
+            "update_url": self.update_url,
+            "update_checked_at": self.update_checked_at,
+            "check_updates": self.check_updates,
             "music_pulse": self.music_pulse_enabled,
             "current_bpm": self.current_bpm,
             "detected_bpm": self.detected_bpm,

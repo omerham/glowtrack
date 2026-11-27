@@ -18,10 +18,10 @@
     ['Motion', [['sl', 'cycle', 'Colour cycle', 3, 20], ['sl', 'fade', 'Song fade', 1, 8], ['seg', 'fsm', 'Full-screen motion', [['0', 'Off'], ['1', 'Slow'], ['3', 'Medium'], ['5', 'Fast']]]]],
     ['Beat pulse', [['sl', 'depth', 'Pulse depth', 10, 90], ['tempo']]],
     ['Playback', [['sl', 'vol', 'Volume', 0, 100], ['tg', 'shuffle', 'Shuffle'], ['tg', 'repeat', 'Repeat']]],
-    ['Lamps', [['btns', 'lampbtns', [['swap', 'Swap left / right'], ['flip', 'Flip top / bottom'], ['rescan', 'Rescan'], ['blinkL', 'Blink left'], ['blinkR', 'Blink right']]], ['seg', 'preview', 'Lamp preview', [['smooth', 'Smooth'], ['low', 'Low power'], ['off', 'Minimal']]]]],
+    ['Lamps', [['hint', 'lamphelp', 'Lamps not showing? In the Govee Home app turn on LAN Control for each lamp (lamp, Settings, LAN Control). Keep the Mac and lamps on the same Wi-Fi, not a guest network, then press Rescan.'], ['btns', 'lampbtns', [['swap', 'Swap left / right'], ['flip', 'Flip top / bottom'], ['rescan', 'Rescan'], ['blinkL', 'Blink left'], ['blinkR', 'Blink right']]], ['seg', 'preview', 'Lamp preview', [['smooth', 'Smooth'], ['low', 'Low power'], ['off', 'Minimal']]]]],
     ['Other lights', [['form']]],
     ['Phone and tablet', [['link']]],
-    ['App', [['btns', 'helpbtns', [['report', 'Report a problem']]], ['danger', 'Shut down']]]
+    ['App', [['upd'], ['btns', 'helpbtns', [['report', 'Report a problem']]], ['danger', 'Shut down']]]
   ];
   var ICON = {
     prev: '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 2h2v12H3zM14 2v12L6 8z" fill="currentColor"/></svg>',
@@ -158,7 +158,9 @@
     btns: function (r) { return '<div class="xblk"><div class="xrow">' + r[2].map(function (o) { return '<button class="xbtn" data-act="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div>'; },
     sw: function (r) { return '<div class="xblk"><div class="xl">' + r[2] + '</div><div class="xrow" data-swatches></div></div>'; },
     tempo: function () { return '<div class="xblk"><div class="xl">Tempo <span class="xv" data-b="tempotext"></span></div><div class="xrow"><button class="xbtn" data-act="tap">Tap</button><button class="xbtn" data-act="auto">Auto</button></div></div>'; },
-    form: function () { return '<div class="xblk"><div class="xl">WiZ, LIFX and WLED lights (experimental)</div><div class="xrow" data-devlist></div><div class="xrow"><select class="xin" id="tdKind"><option value="wiz">WiZ</option><option value="lifx">LIFX</option><option value="wled">WLED strip</option></select><input class="xin" id="tdIp" placeholder="192.168.1.x"><select class="xin" id="tdSide"><option value="left">Follows left</option><option value="right">Follows right</option></select><button class="xbtn" data-act="adddev">Add</button><button class="xbtn" data-act="scandev">Scan</button></div><div class="xmsg" data-b="devmsg"></div></div>'; },
+    form: function () { return '<div class="xblk"><div class="xl">WiZ, LIFX and WLED lights (experimental)</div><div class="xrow" data-devlist></div><div class="xrow"><select class="xin" id="tdKind" aria-label="Kind of light"><option value="wiz">WiZ</option><option value="lifx">LIFX</option><option value="wled">WLED strip</option></select><input class="xin" id="tdIp" placeholder="192.168.1.x" aria-label="IP address of the light"><select class="xin" id="tdSide" aria-label="Which lamp it follows"><option value="left">Follows left</option><option value="right">Follows right</option></select><button class="xbtn" data-act="adddev">Add</button><button class="xbtn" data-act="scandev">Scan</button></div><div class="xmsg" data-b="devmsg"></div></div>'; },
+    hint: function (r) { return '<div class="xblk"><div class="xl">' + r[2] + '</div></div>'; },
+    upd: function () { return '<div class="xblk"><div class="xl" data-b="updtext"></div><div class="xrow"><button class="xbtn" data-act="updact" data-b="updbtn">Check now</button><button class="xbtn" data-act="updauto" data-b="updauto">Daily check: on</button></div></div>'; },
     link: function () { return '<div class="xblk"><div class="xl">Open this link once on each phone or tablet (same Wi-Fi). Keep it private.</div><div class="xrow"><input class="xin xwide" readonly data-pairlink><button class="xbtn" data-act="copylink">Copy</button></div></div>'; }
   };
   ['c', 'd'].forEach(function (d) { PRIM[d].danger = function () { return ''; }; });   // C and D keep Shut down in the header
@@ -326,6 +328,7 @@
     var p = pos(), dur = s.track_dur || 0;
     root.style.setProperty('--prog', dur ? (p / dur).toFixed(4) : '0');
     setB('pos', fmt(p, true));
+    q('[data-seek]').forEach(function (b) { b.setAttribute('aria-valuemax', Math.round(dur)); b.setAttribute('aria-valuenow', Math.round(p)); b.setAttribute('aria-valuetext', fmt(p, true) + ' of ' + fmt(dur, true)); });
     if (showsLyrics()) paintLyrics();
   }
 
@@ -355,12 +358,15 @@
     }
     var artSig = s.art_url || '';
     if (T.sig.art !== artSig) { T.sig.art = artSig; if (artSig) root.style.setProperty('--cov', 'url("' + artSig + '")'); }
-    setB('lampsline', (s.online_count || 0) + ' of ' + (s.configured_count || 0) + ' lamps online');
+    setB('lampsline', s.configured_count ? (s.online_count || 0) + ' of ' + s.configured_count + ' lamps online' : 'No Govee lamps found yet');
     var src = s.source_name || 'Spotify', track = s.track || '', artist = s.artist || '', album = s.album || '';
     setB('title', track); setB('titleU', track.toUpperCase()); setB('artist', artist); setB('artistU', artist.toUpperCase());
     setB('artistline', album ? artist + '  /  ' + album : artist); setB('artistalbum', album ? artist + ', ' + album : artist);
     setB('src', src); setB('dur', fmt(s.track_dur)); setB('durlong', '/ ' + fmt(s.track_dur));
     var bpm = Math.round(s.current_bpm || 0); setB('bpm', String(bpm)); setB('bpmlong', bpm + ' bpm'); setB('bpmlabel', 'BPM');
+    setB('updtext', s.update_available ? 'Version ' + s.update_version + ' is available (you have ' + s.version + ').' : s.update_checked_at ? 'You have the newest version (' + s.version + ').' : (s.check_updates === false ? 'Automatic checks are off. You have version ' + s.version + '.' : 'Version ' + s.version + '. Not checked yet.'));
+    setB('updbtn', s.update_available ? 'Download' : 'Check now');
+    setB('updauto', s.check_updates === false ? 'Daily check: off' : 'Daily check: on');
     setB('tempotext', bpm + ' BPM, ' + (s.bpm_known === false ? 'not found: tap to set' : (s.bpm_source || '')));
     var mdef = MODES.filter(function (m) { return m.id === mode; })[0]; setB('modelong', mdef ? mdef.long : '');
     setB('powerword', s.is_powered_on ? 'on' : 'off');
@@ -391,6 +397,9 @@
       });
     });
     q('[data-segk]').forEach(function (b) { b.classList.toggle('on', String(cur(b.getAttribute('data-segk'))) === b.getAttribute('data-segv')); });
+    q('[data-mode],[data-toggle],[data-power],[data-lyrics],[data-st],[data-segk]').forEach(function (b) {      // screen readers: which buttons are switched on
+      var on = String(b.classList.contains('on')); if (b.getAttribute('aria-pressed') !== on) b.setAttribute('aria-pressed', on);
+    });
     q('[data-act="shutdown"]').forEach(function (b) { b.textContent = T.confirm ? 'Click again to confirm' : 'Shut down'; });
     paintSwatches(s, pal); paintDevices(s);
     fitTitles();
@@ -449,7 +458,7 @@
       var size = ph ? 140 : !fs ? 128 : ly ? 56 : 120;
       while (size > 26) { el.style.fontSize = size + 'px'; if (el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1) break; size -= 3; }
     });
-    fitLines('.A .ttl', 2); fitLines('.A.fs .big', 3); fitLines('.B.fs .tt', 3); fitLines('.D .credit h3', 2);
+    fitLines('.A .ttl', 2); fitLines('.A.fs .big', 3); fitLines('.B.fs .tt', 2); fitLines('.D .credit h3', 2);
     q('.B.m .tt').forEach(function (el) {             // Dot title: at most two lines
       var key = el.textContent; if (el._fit === key) return; el._fit = key;
       var size = 68; while (size > 34) { el.style.fontSize = size + 'px'; if (el.offsetHeight <= size * 0.94 * 2 + 3) break; size -= 3; }
@@ -514,6 +523,7 @@
     var dots = q('[data-b="dimdots"]');
     dots.forEach(function (h) { for (var i = 1; i <= 20; i++) { var b = document.createElement('button'); b.setAttribute('data-bright', i * 5); b.setAttribute('aria-label', 'Brightness ' + i * 5); h.appendChild(b); } });
     q('[data-knob]').forEach(bindKnob);
+    q('[data-seek]').forEach(function (b) { b.setAttribute('role', 'slider'); b.setAttribute('tabindex', '0'); b.setAttribute('aria-label', 'Song position'); b.setAttribute('aria-valuemin', '0'); });
     if (T.screen === 'settings') loadPair();
     if (T.screen === 'full') wake();
     fit();
@@ -591,6 +601,8 @@
       case 'adddisc': api('/api/devices/add', { kind: el.getAttribute('data-kind'), ip: el.getAttribute('data-ip'), side: 'left' }); break;
       case 'rmdev': api('/api/devices/remove', { ip: el.getAttribute('data-ip') }); break;
       case 'copylink': { var inp = root.querySelector('[data-pairlink]'); if (inp) { inp.select(); try { if (navigator.clipboard) navigator.clipboard.writeText(inp.value); else document.execCommand('copy'); } catch (e) { try { document.execCommand('copy'); } catch (e2) {} } } break; }
+      case 'updact': if (s && s.update_available) window.open(s.update_url, '_blank', 'noopener'); else api('/api/updates/check'); break;
+      case 'updauto': api('/api/updates/auto', { enabled: !!(s && s.check_updates === false) }); break;
       case 'report': if (window.reportProblem) window.reportProblem(); break;
       case 'shutdown':
         if (!T.confirm) { T.confirm = true; T.confirmAt = performance.now(); paint(); setTimeout(function () { T.confirm = false; paint(); }, 4000); }
@@ -633,7 +645,13 @@
     if (t.hasAttribute('data-devname')) api('/api/devices/update', { ip: t.getAttribute('data-ip'), name: t.value });
     else if (t.hasAttribute('data-devside')) api('/api/devices/update', { ip: t.getAttribute('data-ip'), side: t.value });
   });
-  root.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.hasAttribute && e.target.hasAttribute('data-devname')) e.target.blur(); });
+  root.addEventListener('keydown', function (e) {
+    var t = e.target; if (!t.hasAttribute) return;
+    if (e.key === 'Enter' && t.hasAttribute('data-devname')) t.blur();
+    else if (t.hasAttribute('data-seek') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {     // the song position bar, from the keyboard
+      seekTo(pos() + (e.key === 'ArrowRight' ? 5 : -5)); e.preventDefault(); e.stopPropagation();
+    }
+  });
   root.addEventListener('input', function (e) {
     var t = e.target;
     if (t.hasAttribute('data-range')) sendBright(+t.value);

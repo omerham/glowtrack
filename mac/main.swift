@@ -255,6 +255,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         menu.addItem(.separator())
 
         menu.addItem(item("Open at Login", #selector(toggleLogin), tag: .login))
+        menu.addItem(item("Check for Updates…", #selector(checkForUpdates)))
         menu.addItem(item("Report a Problem…", #selector(reportProblem)))
         menu.addItem(item("Restart Lighting Server", #selector(restartServer)))
         menu.addItem(item("Quit Glowtrack", #selector(quit), key: "q"))
@@ -399,6 +400,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if let url = navigationAction.request.url, url.scheme == "https" { NSWorkspace.shared.open(url) }
         return nil
+    }
+
+    // Opens the releases page in the browser; the dashboard's Settings also shows when a newer version exists
+    @objc func checkForUpdates() {
+        if let url = URL(string: "https://github.com/omerham/glowtrack/releases/latest") { NSWorkspace.shared.open(url) }
     }
 
     @objc func reportProblem() {

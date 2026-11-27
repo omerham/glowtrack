@@ -34,14 +34,14 @@ Pick the look you want. They are all the same app, and you can switch any time i
 5. Play a song. The lamps are found automatically, and Glowtrack lives in your menu bar.
    To change the design, open the dashboard from the menu bar and go to Settings, Design.
 
-**Needs:** an Apple silicon Mac (M1 or later) with macOS 13 or later, and one or two Govee H6076
-floor lamps on the same Wi-Fi as the Mac. Other Govee lamps with LAN control may work but are untested.
+**Needs:** a Mac with macOS 13 or later (Apple silicon, or Intel: the Intel half is new and has not been tried
+on a real Intel Mac yet), and one or two Govee H6076 floor lamps on the same Wi-Fi as the Mac. Other Govee lamps with LAN control may work but are untested.
 
 Something not working, or it worked great? Use **Report a problem** in Settings or the menu bar.
 
 ## Build from source
 
-For developers. (The build script targets Apple silicon; change `-target` in `mac/build.sh` to build for Intel, untested.) You need Xcode command-line tools (`xcode-select --install`) and Pillow
+For developers. You need Xcode command-line tools (`xcode-select --install`) and Pillow
 (`/usr/bin/python3 -m pip install --user Pillow`).
 
 ```
@@ -80,6 +80,9 @@ colour boost, lamp preview quality) is in the dashboard's Settings.
 ## Privacy and security
 
 - Lamp control and the dashboard stay on your network. There is no account and no analytics.
+- Once a day Glowtrack asks GitHub whether a newer release exists (a plain request to GitHub's public
+  releases address; nothing about you, your lamps or your music is sent, and nothing is installed for you).
+  Turn it off in Settings, *Check for updates once a day*.
 - To find tempo and lyrics, the current song and artist names are sent to Deezer,
   songbpm.com and lrclib.net. Album art is fetched from Spotify's own image servers.
 - **Pairing:** this Mac can always use the dashboard. Phones and tablets on your Wi-Fi must be

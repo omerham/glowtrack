@@ -103,6 +103,7 @@ def main():
 
     threading.Thread(target=state.spotify_sync_loop, daemon=True).start()
     threading.Thread(target=state.engine_loop, daemon=True).start()
+    threading.Thread(target=state.update_check_loop, daemon=True).start()
     threading.Thread(target=watch_for_code_changes, daemon=True).start()
     threading.Thread(target=exit_when_orphaned, daemon=True).start()
 

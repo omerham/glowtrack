@@ -124,7 +124,7 @@
 @keyframes dbgB { to { transform: translate(-30vw, 26vh) scale(.85); } }
 @keyframes dbgC { to { transform: translate(30vw, -16vh) scale(1.3); } }
 @keyframes dbgD { to { transform: translate(-26vw, 30vh) scale(1.15); } }
-@media (prefers-reduced-motion: reduce) { .dbg .bl { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .dbg .bl { animation: none; } #themeRoot *, #themeRoot *::before, #themeRoot *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; } }
 .D .lampw { position: absolute; bottom: 104px; width: 46px; display: flex; flex-direction: column-reverse; gap: 3px; transform: translateX(-50%); }
 .D .lampw { -webkit-mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) 18px, #000 72px); mask-image: linear-gradient(to top, transparent 0, rgba(0,0,0,.35) 18px, #000 72px); }
 .D .lampw i { height: 46px; background: var(--c); box-shadow: 0 0 40px 10px var(--c); }

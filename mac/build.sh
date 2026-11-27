@@ -2,7 +2,8 @@
 # Builds the menu-bar app.
 #   mac/build.sh                 -> build/Glowtrack.app, runs the server from this folder (for development)
 #   mac/build.sh --dist          -> self-contained downloads: build/dist/Glowtrack-<design>.zip for
-#                                   classic, a, b, c and d (server, Pillow and the Now Playing helper inside)
+#                                   classic, a, b, c and d (server, Pillow and the Now Playing helper inside),
+#                                   each one runs on Apple silicon and on Intel Macs
 #   mac/build.sh --dist --theme c  -> just one design
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -15,6 +16,12 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+# The self-contained downloads carry a Pillow that runs on both chips (downloaded once, checked, cached)
+PIL_UNIVERSAL="../build/cache"
+if [[ "$DIST" == "1" && ! -d "$PIL_UNIVERSAL/PIL" ]]; then
+  /usr/bin/python3 universal_pillow.py "$PIL_UNIVERSAL"
+fi
 
 build_app() {  # build_app <output .app> <embed 0|1> <default theme or empty>
   local APP="$1" EMBED="$2" THEME="$3"
@@ -29,15 +36,19 @@ build_app() {  # build_app <output .app> <embed 0|1> <default theme or empty>
   if [[ "$EMBED" == "1" ]]; then
     mkdir -p "$APP/Contents/Resources/server" "$APP/Contents/Resources/vendor"
     rsync -a --exclude '__pycache__' --exclude '*.pyc' ../server/ "$APP/Contents/Resources/server/"
-    clang -dynamiclib -fobjc-arc -framework Foundation ../server/nowplaying/mr.m -o "$APP/Contents/Resources/server/nowplaying/libmr.dylib"
-    PIL_DIR="$(/usr/bin/python3 -c 'import PIL,os;print(os.path.dirname(PIL.__file__))' 2>/dev/null || true)"
-    if [[ -z "$PIL_DIR" ]]; then echo "Pillow is not installed for /usr/bin/python3: run  /usr/bin/python3 -m pip install --user Pillow"; exit 1; fi
-    cp -R "$PIL_DIR" "$APP/Contents/Resources/vendor/PIL"
+    clang -dynamiclib -fobjc-arc -arch arm64 -arch x86_64 -mmacosx-version-min=13.0 -framework Foundation ../server/nowplaying/mr.m -o "$APP/Contents/Resources/server/nowplaying/libmr.dylib"
+    cp -R "$PIL_UNIVERSAL/PIL" "$APP/Contents/Resources/vendor/PIL"
     find "$APP/Contents/Resources/vendor" -name '__pycache__' -prune -exec rm -rf {} +
   fi
-  swiftc -O -swift-version 5 -target arm64-apple-macos13.0 \
-    -framework AppKit -framework WebKit -framework ServiceManagement \
-    main.swift -o "$APP/Contents/MacOS/Glowtrack"
+  # One app for both kinds of Mac: build each chip's version and join them
+  local TMPB; TMPB="$(mktemp -d)"
+  for ARCH in arm64 x86_64; do
+    swiftc -O -swift-version 5 -target "$ARCH-apple-macos13.0" \
+      -framework AppKit -framework WebKit -framework ServiceManagement \
+      main.swift -o "$TMPB/Glowtrack-$ARCH"
+  done
+  lipo -create "$TMPB/Glowtrack-arm64" "$TMPB/Glowtrack-x86_64" -output "$APP/Contents/MacOS/Glowtrack"
+  rm -rf "$TMPB"
   codesign --force --deep --sign - "$APP"
 }
 

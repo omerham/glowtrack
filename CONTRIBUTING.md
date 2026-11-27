@@ -33,3 +33,13 @@ a short test-report form for that too, and "it just worked" is a useful report.
 
 Security issues (e.g. a way to control someone's lamps from another device): please report
 privately to the maintainer rather than in a public issue.
+
+## Editing the designs
+
+`server/web/themes.js` and `themes.css` are the source of the four designs (they were first generated from
+a mockup, but that pipeline is gone). Edit them directly, then follow the checks above: run
+`tools/layout-lint.js` and look at every screen, including with a very long title.
+
+## Releasing
+
+`tools/release.sh <version> <notes.md>` does the whole release; see [docs/releasing.md](docs/releasing.md).

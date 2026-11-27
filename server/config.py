@@ -2,6 +2,7 @@
 import json
 import os
 import secrets
+import threading
 
 VERSION = "3.1.4"               # keep in step with mac/Info.plist
 ISSUES_URL = "https://github.com/omerham/glowtrack/issues/new"
@@ -33,14 +34,19 @@ def load_config():
         pass
     return {}
 
+_SAVE_LOCK = threading.Lock()
+
 def save_config(cfg):
-    try:
-        tmp = CONFIG_FILE + ".tmp"
-        with open(tmp, "w") as f:
-            json.dump(cfg, f, indent=2)
-        os.replace(tmp, CONFIG_FILE)
-    except Exception as e:
-        print(f"[!] Could not save config: {e}")
+    """Writes the config atomically. Saves can arrive from several threads at once (a dashboard
+    change while the lamps are renamed, say), so they take turns instead of fighting over one temp file."""
+    with _SAVE_LOCK:
+        try:
+            tmp = CONFIG_FILE + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(cfg, f, indent=2)
+            os.replace(tmp, CONFIG_FILE)
+        except Exception as e:
+            print(f"[!] Could not save config: {e}")
 
 
 # Other devices on the Wi-Fi must be "paired" once (open the link shown in Settings on

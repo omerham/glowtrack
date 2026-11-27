@@ -938,6 +938,87 @@ class OtherDevicesTest(unittest.TestCase):
         self.assertEqual((again.name, again.side), ("Beam", "right"))
 
 
+class ConfigSaveTest(unittest.TestCase):
+    def test_many_threads_saving_at_once_never_lose_the_file(self):
+        import json
+        import tempfile
+        import threading
+        import config
+        old = config.CONFIG_FILE
+        d = tempfile.mkdtemp()
+        config.CONFIG_FILE = os.path.join(d, "cfg.json")
+        try:
+            errors = []
+            def run(n):
+                for i in range(60):
+                    config.save_config({"n": n, "i": i})
+            threads = [threading.Thread(target=run, args=(n,)) for n in range(8)]
+            [t.start() for t in threads]
+            [t.join() for t in threads]
+            data = json.load(open(config.CONFIG_FILE))          # a whole, valid file
+            self.assertEqual(sorted(data), ["i", "n"])
+            self.assertFalse(os.path.exists(config.CONFIG_FILE + ".tmp"))
+        finally:
+            config.CONFIG_FILE = old
+
+
+class UpdateNoticeTest(unittest.TestCase):
+    def test_version_compare(self):
+        import updates
+        self.assertEqual(updates.parse_version("v3.1.4"), (3, 1, 4))
+        self.assertEqual(updates.parse_version("3.2"), (3, 2, 0))
+        self.assertIsNone(updates.parse_version("latest"))
+        self.assertTrue(updates.is_newer("3.1.10", "3.1.9"))        # numbers, not text
+        self.assertFalse(updates.is_newer("3.1.4", "3.1.4"))
+        self.assertFalse(updates.is_newer("3.0.9", "3.1.0"))
+        self.assertFalse(updates.is_newer("garbage", "3.1.0"))
+
+    def test_state_reports_a_newer_release(self):
+        import config
+        import updates
+        S = engine.AppState()
+        S.save_config = lambda: None
+        self.assertFalse(S.to_dict()["update_available"])
+        real = updates.fetch_latest
+        try:
+            updates.fetch_latest = lambda: ("99.0.0", "https://github.com/omerham/glowtrack/releases/tag/v99.0.0")
+            self.assertTrue(S.check_for_update(force=True))
+            d = S.to_dict()
+            self.assertTrue(d["update_available"])
+            self.assertEqual(d["update_version"], "99.0.0")
+            updates.fetch_latest = lambda: (config.VERSION, updates.RELEASES_PAGE)
+            S.check_for_update(force=True)
+            self.assertFalse(S.to_dict()["update_available"])
+        finally:
+            updates.fetch_latest = real
+
+    def test_turning_checks_off_means_no_request(self):
+        import updates
+        S = engine.AppState()
+        S.save_config = lambda: None
+        calls = []
+        real = updates.fetch_latest
+        try:
+            updates.fetch_latest = lambda: calls.append(1) or ("99.0.0", updates.RELEASES_PAGE)
+            S.check_updates = False
+            self.assertFalse(S.check_for_update())
+            self.assertEqual(calls, [])                  # nothing was sent
+            self.assertEqual(S.to_dict()["check_updates"], False)
+        finally:
+            updates.fetch_latest = real
+
+    def test_a_failed_check_is_quiet(self):
+        import updates
+        real = urllib_open = updates.urllib.request.urlopen
+        try:
+            def boom(*a, **k):
+                raise OSError("offline")
+            updates.urllib.request.urlopen = boom
+            self.assertIsNone(updates.fetch_latest())
+        finally:
+            updates.urllib.request.urlopen = real
+
+
 class ReportProblemTest(unittest.TestCase):
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

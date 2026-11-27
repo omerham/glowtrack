@@ -496,6 +496,14 @@ class GoveeHttpHandler(BaseHTTPRequestHandler):
             S.flash(rgb, times)
             return ok
 
+        if path == "/api/updates/check":
+            threading.Thread(target=lambda: S.check_for_update(force=True), daemon=True).start()
+            return ok
+
+        if path == "/api/updates/auto":
+            S.set_check_updates(bool(body.get("enabled", True)))
+            return ok
+
         if path == "/api/devices/add":
             try:
                 S.add_device(body.get("kind"), body.get("ip"), body.get("side", "left"), body.get("name", ""))
