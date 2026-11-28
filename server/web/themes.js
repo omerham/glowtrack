@@ -16,9 +16,9 @@
     ['Design', [['seg', 'theme', 'Look', [['classic', 'Classic'], ['a', 'A Instrument'], ['b', 'B Dot'], ['c', 'C Poster'], ['d', 'D Stage']]]]],
     ['Colours', [['sl', 'vib', 'Vibrancy', 70, 180], ['sl', 'dark', 'Dark colour boost', 0, 100], ['tg', 'white', 'White accents from the cover'], ['sw', 'swatch', 'Lock one colour']]],
     ['Motion', [['sl', 'cycle', 'Colour cycle', 3, 20], ['sl', 'fade', 'Song fade', 1, 8], ['seg', 'fsm', 'Full-screen motion', [['0', 'Off'], ['1', 'Slow'], ['3', 'Medium'], ['5', 'Fast']]]]],
-    ['Beat pulse', [['sl', 'depth', 'Pulse depth', 10, 90], ['tempo']]],
+    ['Beat pulse', [['sl', 'depth', 'Pulse depth', 10, 90], ['tempo'], ['btns', 'beatbtns', [['beathere', 'Beat is now'], ['beatearly', 'Earlier'], ['beatlate', 'Later'], ['beatforget', 'Forget this song']]], ['sl', 'lead', 'Pulse timing', -100, 300], ['tg', 'sharp', 'Sharp pulse (every zone, every frame)']]],
     ['Playback', [['sl', 'vol', 'Volume', 0, 100], ['tg', 'shuffle', 'Shuffle'], ['tg', 'repeat', 'Repeat']]],
-    ['Lamps', [['hint', 'lamphelp', 'Lamps not showing? In the Govee Home app turn on LAN Control for each lamp (lamp, Settings, LAN Control). Keep the Mac and lamps on the same Wi-Fi, not a guest network, then press Rescan.'], ['btns', 'lampbtns', [['swap', 'Swap left / right'], ['flip', 'Flip top / bottom'], ['rescan', 'Rescan'], ['blinkL', 'Blink left'], ['blinkR', 'Blink right']]], ['seg', 'preview', 'Lamp preview', [['smooth', 'Smooth'], ['low', 'Low power'], ['off', 'Minimal']]]]],
+    ['Lamps', [['btns', 'syncbtns', [['sync', 'Check sync']]], ['syncline'], ['hint', 'lamphelp', 'Lamps not showing? In the Govee Home app turn on LAN Control for each lamp (lamp, Settings, LAN Control). Keep the Mac and lamps on the same Wi-Fi, not a guest network, then press Rescan.'], ['btns', 'lampbtns', [['swap', 'Swap left / right'], ['flip', 'Flip top / bottom'], ['rescan', 'Rescan'], ['blinkL', 'Blink left'], ['blinkR', 'Blink right']]], ['seg', 'preview', 'Lamp preview', [['smooth', 'Smooth'], ['low', 'Low power'], ['off', 'Minimal']]]]],
     ['Other lights', [['form']]],
     ['Phone and tablet', [['link']]],
     ['App', [['upd'], ['btns', 'helpbtns', [['report', 'Report a problem']]], ['danger', 'Shut down']]]
@@ -160,6 +160,7 @@
     sw: function (r) { return '<div class="xblk"><div class="xl">' + r[2] + '</div><div class="xrow" data-swatches></div></div>'; },
     tempo: function () { return '<div class="xblk"><div class="xl">Tempo <span class="xv" data-b="tempotext"></span></div><div class="xrow"><button class="xbtn" data-act="tap">Tap</button><button class="xbtn" data-act="auto">Auto</button></div></div>'; },
     form: function () { return '<div class="xblk"><div class="xl">WiZ, LIFX and WLED lights (experimental)</div><div class="xrow" data-devlist></div><div class="xrow"><select class="xin" id="tdKind" aria-label="Kind of light"><option value="wiz">WiZ</option><option value="lifx">LIFX</option><option value="wled">WLED strip</option></select><input class="xin" id="tdIp" placeholder="192.168.1.x" aria-label="IP address of the light"><select class="xin" id="tdSide" aria-label="Which lamp it follows"><option value="left">Follows left</option><option value="right">Follows right</option></select><button class="xbtn" data-act="adddev">Add</button><button class="xbtn" data-act="scandev">Scan</button></div><div class="xmsg" data-b="devmsg"></div></div>'; },
+    syncline: function () { return '<div class="xblk"><div class="xl" data-b="syncmsg">Sets both lamps to one colour for a few seconds and asks each what it is showing.</div></div>'; },
     hint: function (r) { return '<div class="xblk"><div class="xl">' + r[2] + '</div></div>'; },
     upd: function () { return '<div class="xblk"><div class="xl" data-b="updtext"></div><div class="xrow"><button class="xbtn" data-act="updact" data-b="updbtn">Check now</button><button class="xbtn" data-act="updauto" data-b="updauto">Daily check: on</button></div></div>'; },
     link: function () { return '<div class="xblk"><div class="xl">Open this link once on each phone or tablet (same Wi-Fi). Keep it private.</div><div class="xrow"><input class="xin xwide" readonly data-pairlink><button class="xbtn" data-act="copylink">Copy</button></div></div>'; }
@@ -340,7 +341,7 @@
     var s = T.s, o = T.ov[key]; if (o && o.until > performance.now()) return o.v;
     switch (key) {
       case 'vib': return Math.round((s.vibrancy || 1.15) * 100); case 'dark': return Math.round((s.dark_boost == null ? 0.65 : s.dark_boost) * 100);
-      case 'cycle': return Math.round(s.flow_speed || 5); case 'fade': return Math.round(s.trans_speed || 3); case 'depth': return Math.round((s.pulse_depth || 0.6) * 100);
+      case 'cycle': return Math.round(s.flow_speed || 5); case 'fade': return Math.round(s.trans_speed || 3); case 'depth': return Math.round((s.pulse_depth || 0.6) * 100); case 'lead': return s.pulse_lead_ms == null ? 80 : s.pulse_lead_ms; case 'sharp': return !!s.pulse_sharp;
       case 'vol': return s.volume == null ? 50 : s.volume; case 'white': return !!s.white_accent; case 'shuffle': return !!s.shuffle; case 'repeat': return !!s.repeat;
       case 'theme': return T.theme; case 'fsm': return String(s.fs_motion == null ? 1 : s.fs_motion); case 'preview': return s.preview_mode || 'smooth';
     }
@@ -370,7 +371,10 @@
     setB('updtext', s.update_available ? 'Version ' + s.update_version + ' is available (you have ' + s.version + ').' : s.update_checked_at ? 'You have the newest version (' + s.version + ').' : (s.check_updates === false ? 'Automatic checks are off. You have version ' + s.version + '.' : 'Version ' + s.version + '. Not checked yet.'));
     setB('updbtn', s.update_available ? 'Download' : 'Check now');
     setB('updauto', s.check_updates === false ? 'Daily check: off' : 'Daily check: on');
-    setB('tempotext', bpm + ' BPM, ' + (s.bpm_known === false ? 'not found: tap to set' : (s.bpm_source || '')));
+    var sr = s.sync_result, lk = s.lamp_link || {}, ls = [];
+    [['Left', s.left_ip], ['Right', s.right_ip]].forEach(function (p) { var l = lk[p[1]]; if (l) ls.push(p[0] + ' lamp answered ' + l.answered_pct + '% of status requests' + (l.rtt_ms != null ? ' (' + l.rtt_ms + ' ms)' : '')); });
+    setB('syncmsg', (sr ? sr.lines.join(' ') : 'Sets both lamps to one colour for a few seconds and asks each what it is showing.') + (ls.length ? '  ' + ls.join('; ') + '.' : ''));
+    setB('tempotext', bpm + ' BPM, ' + (s.bpm_known === false ? 'not found: tap to set' : (s.bpm_source || '')) + (s.beat_remembered ? ', beat saved for this song' : ''));
     var mdef = MODES.filter(function (m) { return m.id === mode; })[0]; setB('modelong', mdef ? mdef.long : '');
     setB('powerword', s.is_powered_on ? 'on' : 'off');
     setBH('playicon', s.is_playing ? ICON.pause : ICON.play); setB('playword', s.is_playing ? 'Pause' : 'Play');
@@ -385,18 +389,18 @@
     var nd = el.querySelector('[data-b="knobneedle"]'); if (nd) nd.setAttribute('transform', 'rotate(' + (-135 + (br - 5) / 95 * 270) + ' 56 56)');
     el.classList.toggle('ly', !!T.lyrics && el.classList.contains('fs'));
     // settings values
-    ['vib', 'dark', 'cycle', 'fade', 'depth', 'vol'].forEach(function (k) {
+    ['vib', 'dark', 'cycle', 'fade', 'depth', 'lead', 'vol'].forEach(function (k) {
       var v = cur(k); var txt = fmtSet(k, v);
       q('[data-sv="' + k + '"]').forEach(function (e) { if (e.textContent !== txt) e.textContent = txt; });
       q('[data-sl="' + k + '"]').forEach(function (e) { if (+e.value !== v && document.activeElement !== e) e.value = v; });
       q('[data-sdk="' + k + '"]').forEach(function (b) { b.classList.toggle('on', +b.getAttribute('data-sdv') <= v); });
       q('[data-sb="' + k + '"]').forEach(function (b) { var r2 = RANGE[k]; b.style.setProperty('--w', ((v - r2[0]) / (r2[1] - r2[0]) * 100) + '%'); });
     });
-    ['white', 'shuffle', 'repeat'].forEach(function (k) {
+    ['white', 'shuffle', 'repeat', 'sharp'].forEach(function (k) {
       var v = cur(k);
       q('[data-st="' + k + '"]').forEach(function (b) {
         b.classList.toggle('on', v); if (b.hasAttribute('data-tt')) b.textContent = v ? 'On' : 'Off';
-        if (k !== 'white') { var row = b.closest('.row,.sr'); if (row) row.style.display = s.can_shuffle_repeat === false ? 'none' : ''; }
+        if (k === 'shuffle' || k === 'repeat') { var row = b.closest('.row,.sr'); if (row) row.style.display = s.can_shuffle_repeat === false ? 'none' : ''; }
       });
     });
     q('[data-segk]').forEach(function (b) { b.classList.toggle('on', String(cur(b.getAttribute('data-segk'))) === b.getAttribute('data-segv')); });
@@ -409,7 +413,7 @@
     schedule(); tick(); secTick();
     if (showsLyrics()) { loadLyrics(); paintLyrics(); }
   }
-  function fmtSet(k, v) { return k === 'vib' ? (v / 100).toFixed(2) + 'x' : (k === 'cycle' || k === 'fade') ? v + 's' : v + '%'; }
+  function fmtSet(k, v) { return k === 'lead' ? v + ' ms' : k === 'vib' ? (v / 100).toFixed(2) + 'x' : (k === 'cycle' || k === 'fade') ? v + 's' : v + '%'; }
   var RANGE = {}; GROUPS.forEach(function (g) { g[1].forEach(function (r) { if (r[0] === 'sl') RANGE[r[1]] = [r[3], r[4]]; }); });
 
   function paintSwatches(s, pal) {
@@ -567,14 +571,14 @@
     kn.addEventListener('pointerup', function () { drag = false; });
   }
   var SETEP = { vib: function (v) { return ['/api/vibrancy', { value: v / 100 }]; }, dark: function (v) { return ['/api/dark_boost', { value: v / 100 }]; }, cycle: function (v) { return ['/api/flow_speed', { speed: v }]; },
-    fade: function (v) { return ['/api/trans_speed', { speed: v }]; }, depth: function (v) { return ['/api/pulse_depth', { depth: v / 100 }]; }, vol: function (v) { return ['/api/playback/volume', { value: v }]; } };
+    fade: function (v) { return ['/api/trans_speed', { speed: v }]; }, depth: function (v) { return ['/api/pulse_depth', { depth: v / 100 }]; }, lead: function (v) { return ['/api/pulse_lead', { ms: v }]; }, vol: function (v) { return ['/api/playback/volume', { value: v }]; } };
   function setNum(k, v) {
     v = Math.round(v); T.ov[k] = { v: v, until: performance.now() + 1500 }; clearTimeout(T['t_' + k]);
     T['t_' + k] = setTimeout(function () { var e = SETEP[k](v); api(e[0], e[1]); }, 110); paint();
   }
   function setToggle(k) {
     var v = !cur(k); T.ov[k] = { v: v, until: performance.now() + 1500 };
-    if (k === 'white') api('/api/white_accent', { enabled: v }); else if (k === 'shuffle') api('/api/playback/shuffle', { on: v }); else if (k === 'repeat') api('/api/playback/repeat', { on: v });
+    if (k === 'white') api('/api/white_accent', { enabled: v }); else if (k === 'shuffle') api('/api/playback/shuffle', { on: v }); else if (k === 'repeat') api('/api/playback/repeat', { on: v }); else if (k === 'sharp') api('/api/pulse_sharp', { on: v });
     paint();
   }
   function setSeg(k, v) {
@@ -599,6 +603,7 @@
       case 'swap': api('/api/swap_lr'); break; case 'flip': api('/api/invert_tb'); break; case 'rescan': api('/api/rescan'); break;
       case 'blinkL': api('/api/lamps/identify', { side: 'left' }); break; case 'blinkR': api('/api/lamps/identify', { side: 'right' }); break;
       case 'auto': api('/api/bpm_auto'); break;
+      case 'beathere': api('/api/beat_here'); break; case 'beatearly': api('/api/beat_nudge', { ms: -20 }); break; case 'beatlate': api('/api/beat_nudge', { ms: 20 }); break; case 'beatforget': api('/api/beat_forget'); break;
       case 'tap': {
         var now = performance.now(); if (T.taps.length && now - T.taps[T.taps.length - 1] > 2500) T.taps = [];
         T.taps.push(now); if (T.taps.length > 8) T.taps.shift();
@@ -615,6 +620,7 @@
       case 'copylink': { var inp = root.querySelector('[data-pairlink]'); if (inp) { inp.select(); try { if (navigator.clipboard) navigator.clipboard.writeText(inp.value); else document.execCommand('copy'); } catch (e) { try { document.execCommand('copy'); } catch (e2) {} } } break; }
       case 'updact': if (s && s.update_available) window.open(s.update_url, '_blank', 'noopener'); else api('/api/updates/check'); break;
       case 'updauto': api('/api/updates/auto', { enabled: !!(s && s.check_updates === false) }); break;
+      case 'sync': api('/api/sync_check'); break;
       case 'report': if (window.reportProblem) window.reportProblem(); break;
       case 'shutdown':
         if (!T.confirm) { T.confirm = true; T.confirmAt = performance.now(); paint(); setTimeout(function () { T.confirm = false; paint(); }, 4000); }

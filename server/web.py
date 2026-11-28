@@ -334,6 +334,10 @@ class GoveeHttpHandler(BaseHTTPRequestHandler):
             threading.Thread(target=S.connect_and_start, daemon=True).start()
             return {"status": "connected"}
 
+        if path == "/api/sync_check":
+            threading.Thread(target=S.check_lamp_sync, daemon=True).start()
+            return ok
+
         if path == "/api/release":
             if not self._is_local_client():
                 raise BadRequest("this command only works from this Mac")
@@ -469,6 +473,28 @@ class GoveeHttpHandler(BaseHTTPRequestHandler):
             S.preview_mode = mode
             S.save_config()
             S.broadcast()
+            return ok
+
+        if path == "/api/pulse_lead":
+            S.pulse_lead_ms = int(clamp(_num(body, "ms", 80), -300, 500))
+            S.save_config()
+            S.broadcast()
+            return ok
+
+        if path == "/api/pulse_sharp":
+            S.set_pulse_sharp(bool(body.get("on", False)))
+            return ok
+
+        if path == "/api/beat_here":
+            S.beat_here()
+            return ok
+
+        if path == "/api/beat_nudge":
+            S.nudge_beat(_num(body, "ms", 0))
+            return ok
+
+        if path == "/api/beat_forget":
+            S.forget_beat()
             return ok
 
         if path == "/api/pulse_depth":

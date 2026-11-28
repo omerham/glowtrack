@@ -1,4 +1,6 @@
 """Song tempo lookup (Deezer, then songbpm.com) and the song-position energy curve."""
+import bisect
+import collections
 import json
 import re
 import urllib.error
@@ -125,3 +127,54 @@ def calculate_dynamic_intensity(pos_sec, dur_sec):
         section = "Outro Wind-down"
 
     return max(0.60, min(1.0, intensity)), section
+
+
+# ----------------------------------------------------------------------
+# Energy from the song's own lyrics
+# ----------------------------------------------------------------------
+# The fixed curve above assumes every song is built the same way. A song's synced lyrics say more: lines that come
+# back again and again are the chorus, a long stretch with no singing is an intro, a break or an outro. This reads
+# that structure per song; when a song has no synced lyrics the fixed curve is used as before.
+
+LYRIC_WINDOW = 7.0            # seconds either side of the position that count as "now"
+LYRIC_BREAK = 11.0            # silence this long is an instrumental part, not a pause between lines
+
+
+def build_lyric_profile(synced, dur=0.0):
+    """synced: [[seconds, line], ...] as lyrics.py returns it. None when there are too few lines to tell anything."""
+    lines = []
+    for item in synced or []:
+        try:
+            t, text = float(item[0]), _norm(item[1])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if text:
+            lines.append((t, text))
+    lines.sort()
+    if len(lines) < 8:
+        return None
+    count = collections.Counter(text for _, text in lines)
+    return {"t": [t for t, _ in lines], "rep": [count[text] >= 2 and len(text) >= 6 for _, text in lines],
+            "dur": float(dur or 0.0)}
+
+
+def lyric_energy(profile, pos):
+    """(level 0.6-1.0, section name) for a position in a song, from its lyric profile."""
+    ts, rep = profile["t"], profile["rep"]
+    first, last = ts[0], ts[-1]
+    if pos < first:
+        if first < 6.0:
+            return 0.82, "Verse"
+        return 0.66 + 0.16 * max(0.0, min(1.0, pos / first)), "Intro"
+    lo = bisect.bisect_left(ts, pos - LYRIC_WINDOW)
+    hi = bisect.bisect_right(ts, pos + LYRIC_WINDOW)
+    n = hi - lo
+    after = pos - last
+    if after > LYRIC_BREAK or (n == 0 and pos > first):
+        end = profile["dur"] or (last + 30.0)
+        if pos > last:
+            span = max(5.0, end - last)
+            return max(0.6, 0.86 - 0.26 * max(0.0, min(1.0, after / span))), "Outro"
+        return 0.84, "Instrumental"
+    share = sum(1 for i in range(lo, hi) if rep[i]) / n
+    return 0.80 + 0.20 * share, ("Chorus" if share >= 0.5 else "Verse")

@@ -1,5 +1,6 @@
 """Govee LAN protocol: discovery, online status and sending colours over UDP."""
 import base64
+import collections
 import ipaddress
 import json
 import socket
@@ -40,8 +41,12 @@ class GoveeController:
         # Lamp reply tracking (scan + devStatus answers arrive on port 4002)
         self.last_seen = {}            # ip -> time of last reply
         self.status = {}               # ip -> what the lamp last said about itself: on/off, brightness, colour
+        self._probe = None             # while a link check runs: ip -> {"sent": [times], "got": [times]}
+        self._link_log = {}            # ip -> recent link checks, True when a lamp answered (see probe_links)
+        self._link_rtt = {}            # ip -> how long the first answer of the last check took, in ms
         self._heal_tries = {}          # ip -> brightness corrections sent in a row
         self._heal_gave_up = {}        # ip -> when we stopped correcting it
+        self._revived = {}             # ip -> when it was last switched off and on to unstick it
         self.listener_ok = False       # False if port 4002 could not be opened
         self.listener_error = ""
         self.ip_lock = threading.Lock()
@@ -79,6 +84,8 @@ class GoveeController:
                     resp = json.loads(data.decode("utf-8"))
                     data_ = resp.get("msg", {}).get("data", {})
                     reported_ip = data_.get("ip") or src_ip
+                    if resp.get("msg", {}).get("cmd") == "devStatus" and self._probe is not None and src_ip in self._probe:
+                        self._probe[src_ip]["got"].append(time.time())
                     if resp.get("msg", {}).get("cmd") == "devStatus" and "brightness" in data_:
                         self.status[src_ip] = {"on": data_.get("onOff"), "brightness": data_.get("brightness"),
                                                "color": data_.get("color"), "kelvin": data_.get("colorTemInKelvin"), "t": time.time()}
@@ -130,19 +137,105 @@ class GoveeController:
         so every check also sends a scan - any reply counts as online."""
         self.first_check_done_at = time.time() + 3.0
         while True:
-            self.ping_status()
+            self.probe_links()                    # a few status requests per lamp: marks them online and measures the link
             self.send_scan()
             for d in list(self.devices):
                 try:
                     d.ping()
                 except Exception:
                     pass
-            time.sleep(1.5)                      # let the lamps answer, then check what they said
             try:
                 self.heal_brightness()
             except Exception as e:
                 print(f"[!] Brightness check failed: {e}")
-            time.sleep(13.5)
+            time.sleep(12.5)
+
+    PROBES = 5                      # status requests per lamp in one link check
+    PROBE_GAP = 0.4                 # seconds between them: lamps answer only some requests that arrive in a quick burst
+    LINK_SAMPLES = 40               # answers remembered per lamp (about eight checks)
+
+    def probe_links(self):
+        """Sends a few status requests to every lamp, spaced out, and counts the answers. The count is only
+        information: a lamp may answer just some requests because it limits its replies, not because packets are
+        lost, so it is never used to change how colours are sent."""
+        ips = list(self.ips)
+        probe = {ip: {"sent": [], "got": []} for ip in ips}
+        self._probe = probe
+        try:
+            for _ in range(self.PROBES):
+                for ip in ips:
+                    probe[ip]["sent"].append(time.time())
+                    self.send_cmd({"msg": {"cmd": "devStatus", "data": {}}}, ips=[ip])
+                time.sleep(self.PROBE_GAP)
+            time.sleep(0.5)
+        finally:
+            self._probe = None
+        for ip in ips:
+            got = min(len(probe[ip]["got"]), self.PROBES)
+            log = self._link_log.setdefault(ip, collections.deque(maxlen=self.LINK_SAMPLES))
+            log.extend([True] * got + [False] * (self.PROBES - got))
+            if probe[ip]["got"]:
+                self._link_rtt[ip] = round((min(probe[ip]["got"]) - probe[ip]["sent"][0]) * 1000)
+        # lamps outside the configured pair (extra lamps) still count as online when they answer
+        for ip in self.all_ips:
+            if ip not in ips:
+                self.send_cmd({"msg": {"cmd": "devStatus", "data": {}}}, ips=[ip])
+
+    def link_info(self):
+        """{ip: {"answered_pct": 0-100, "rtt_ms": int or None, "samples": n}} for the state shown in the dashboard."""
+        out = {}
+        for ip, log in self._link_log.items():
+            if log:
+                out[ip] = {"answered_pct": round(100.0 * sum(log) / len(log)), "rtt_ms": self._link_rtt.get(ip), "samples": len(log)}
+        return out
+
+    SYNC_COLOUR = (200, 60, 60)
+
+    @staticmethod
+    def compare_lamps(a, b, name_a="left", name_b="right"):
+        """What two lamps' own status reports say about whether they match. Returns a list of plain-language problems."""
+        problems = []
+        if a is None or b is None:
+            return [f"the {name_a if a is None else name_b} lamp did not answer"]
+        if bool(a.get("on")) != bool(b.get("on")):
+            problems.append(f"one lamp is on and the other is off ({name_a}: {'on' if a.get('on') else 'off'})")
+        try:
+            if abs(int(a["brightness"]) - int(b["brightness"])) > 3:
+                problems.append(f"brightness differs: {name_a} {a['brightness']}%, {name_b} {b['brightness']}%")
+        except (KeyError, TypeError, ValueError):
+            pass
+        ca, cb = a.get("color"), b.get("color")
+        if ca and cb:
+            worst = max(abs(int(ca[k]) - int(cb[k])) for k in "rgb")
+            if worst > 20:
+                problems.append(f"the colours differ: {name_a} ({ca['r']}, {ca['g']}, {ca['b']}), {name_b} ({cb['r']}, {cb['g']}, {cb['b']})")
+        return problems
+
+    def sync_check(self):
+        """Sets both lamps to the same colour and asks each what it is showing. The lamps' own answers say whether they
+        match, so this checks the real thing and not what Glowtrack believes it sent. Takes about three seconds."""
+        left = self.left_ip or (self.ips[0] if self.ips else None)
+        right = self.right_ip or (self.ips[1] if len(self.ips) > 1 else None)
+        if not left or not right:
+            return {"ok": False, "lines": ["This check needs two lamps."]}
+        started = time.time()
+        r, g, b = self.SYNC_COLOUR
+        for _ in range(2):
+            self.send_cmd({"msg": {"cmd": "colorwc", "data": {"color": {"r": r, "g": g, "b": b}, "colorTemInKelvin": 0}}}, ips=[left, right])
+            time.sleep(0.15)
+        time.sleep(0.8)
+        self.probe_links()
+        sa, sb = self.status.get(left), self.status.get(right)
+        sa = sa if sa and sa["t"] >= started else None
+        sb = sb if sb and sb["t"] >= started else None
+        problems = self.compare_lamps(sa, sb)
+        link = self.link_info()
+        if not problems:
+            lines = ["Both lamps report the same colour and brightness."]
+            if link and len(link) >= 2 and None not in (link[left]["rtt_ms"], link[right]["rtt_ms"]) and abs(link[left]["rtt_ms"] - link[right]["rtt_ms"]) > 40:
+                lines.append(f"They answer at different speeds ({link[left]['rtt_ms']} ms and {link[right]['rtt_ms']} ms), so one may lag the other a little.")
+            return {"ok": True, "lines": lines}
+        return {"ok": False, "lines": problems}
 
     BRIGHTNESS_TOLERANCE = 3       # a lamp within this many percent of the wanted level counts as right
     BRIGHTNESS_TRIES = 8           # corrections tried in a row (one every 15 s) before giving up for a while
@@ -168,15 +261,43 @@ class GoveeController:
                 continue
             tries = self._heal_tries.get(ip, 0)
             if tries >= self.BRIGHTNESS_TRIES:
-                if now - self._heal_gave_up.get(ip, now) > 300:      # try again every five minutes
+                if ip not in self._heal_gave_up:
+                    self._heal_gave_up[ip] = now
+                    self.revive(ip, now)                     # it ignored every correction: it is stuck, so switch it off and on once
+                elif now - self._heal_gave_up[ip] > 300:     # then try again every five minutes
                     self._heal_tries[ip] = 0
-                self._heal_gave_up.setdefault(ip, now)
+                    del self._heal_gave_up[ip]
                 continue
             self._heal_tries[ip] = tries + 1
             print(f"[*] Lamp {ip} was at {have}% brightness, wanted {want}%: correcting")
             for _ in range(self.BRIGHTNESS_BURST):
                 self.send_cmd({"msg": {"cmd": "brightness", "data": {"value": want}}}, ips=[ip])
                 time.sleep(0.12)
+
+    REVIVE_GAP = 600                # a lamp is switched off and on at most once in this many seconds
+
+    def revive(self, ip, now=None):
+        """A lamp that ignores brightness corrections is stuck (it needs a power cycle, which is what unplugging does).
+        This switches that one lamp off and on over the network, then resends everything to it."""
+        now = time.time() if now is None else now
+        if now - self._revived.get(ip, -1e9) < self.REVIVE_GAP:
+            return False
+        self._revived[ip] = now
+        print(f"[*] Lamp {ip} ignored every correction: switching it off and on")
+        self.send_cmd({"msg": {"cmd": "turn", "data": {"value": 0}}}, ips=[ip])
+        time.sleep(self.REVIVE_PAUSE)
+        self.send_cmd({"msg": {"cmd": "turn", "data": {"value": 1}}}, ips=[ip])
+        time.sleep(self.REVIVE_PAUSE)
+        self._sent.pop(ip, None)
+        self._zone_t.pop(ip, None)
+        for _ in range(self.BRIGHTNESS_BURST):
+            self.send_cmd({"msg": {"cmd": "brightness", "data": {"value": max(1, min(100, int(self.brightness_pct)))}}}, ips=[ip])
+            time.sleep(0.12)
+        self._heal_tries[ip] = 0
+        self._heal_gave_up.pop(ip, None)
+        return True
+
+    REVIVE_PAUSE = 1.0
 
     def sync_ordered_ips(self):
         new_ips = []
@@ -386,15 +507,44 @@ class GoveeController:
                 except Exception:
                     pass
 
+    RELEASE_WAIT = 0.6
+
     def release(self):
         """Hands the lamps back: a plain warm-white colour command, which ends the zone-by-zone control Glowtrack
-        used, so the Govee app (and the lamps' own buttons) work normally again. Lamps that are off stay off."""
+        used, so the Govee app (and the lamps' own buttons) work normally again. Lamps that are off stay off.
+        Each lamp is then asked what it shows; one that did not take the command is switched off and on, because a
+        lamp left stuck would ignore the Govee app too."""
         if not self.is_powered_on:
             return
-        for _ in range(2):                       # UDP can drop a packet; the second one costs nothing
-            self.send_cmd({"msg": {"cmd": "colorwc", "data": {
-                "color": {"r": 0, "g": 0, "b": 0}, "colorTemInKelvin": 3500}}})
-            time.sleep(0.12)
+        def plain():
+            for _ in range(2):                   # UDP can drop a packet; the second one costs nothing
+                self.send_cmd({"msg": {"cmd": "colorwc", "data": {
+                    "color": {"r": 0, "g": 0, "b": 0}, "colorTemInKelvin": 3500}}})
+                time.sleep(0.12)
+        asked = time.time()
+        plain()
+        self.send_cmd({"msg": {"cmd": "devStatus", "data": {}}})
+        time.sleep(self.RELEASE_WAIT)
+        stuck = [ip for ip in self.ips if self._ignored_release(ip, asked)]
+        if stuck:
+            print(f"[*] Lamps {stuck} did not take the release: switching them off and on")
+            for ip in stuck:
+                self.send_cmd({"msg": {"cmd": "turn", "data": {"value": 0}}}, ips=[ip])
+            time.sleep(0.5)
+            for ip in stuck:
+                self.send_cmd({"msg": {"cmd": "turn", "data": {"value": 1}}}, ips=[ip])
+            time.sleep(0.5)
+            for _ in range(2):
+                self.send_cmd({"msg": {"cmd": "colorwc", "data": {"color": {"r": 0, "g": 0, "b": 0}, "colorTemInKelvin": 3500}}}, ips=stuck)
+                time.sleep(0.12)
+
+    def _ignored_release(self, ip, asked):
+        """True when the lamp answered after the release and still shows something other than plain warm white.
+        A lamp that did not answer is left alone: there is no proof it is stuck."""
+        st = self.status.get(ip)
+        if not st or st["t"] < asked or not st.get("on"):
+            return False
+        return st.get("kelvin") != 3500
 
     def set_power(self, on_off):
         self.is_powered_on = bool(on_off)

@@ -5,6 +5,7 @@ anywhere (no lamps or Spotify needed):
     cd ~/GoveeSpotifySync && /usr/bin/python3 -m unittest discover tests
 """
 import base64
+import collections
 import os
 import sys
 import tempfile
@@ -142,6 +143,144 @@ class EngineTest(unittest.TestCase):
         S.is_playing = False
         self.assertEqual(S.get_beat_envelope(), 1.0)
         S.is_playing = True
+
+
+class BeatSyncTest(unittest.TestCase):
+    def setUp(self):
+        self.S = engine.AppState()
+        self.S.save_config = lambda: None
+        self.S.broadcast = lambda: None
+        self.S.current_track, self.S.current_artist = "Golden Hour", "The Demo Tapes"
+        self.S.is_ad = False
+        self.S.bpm_known = True
+        self.S.current_bpm = 120.0
+
+    def _at(self, pos):
+        self.S.current_pos, self.S.pos_sample_time, self.S.is_playing = pos, time.time(), False
+
+    def test_the_lead_is_a_setting(self):
+        S = self.S
+        S.music_pulse_enabled, S.is_playing = True, True
+        S.pulse_depth, S.beat_offset = 0.6, 0.0
+        for lead in (0, 150):
+            S.pulse_lead_ms = lead
+            S.current_pos, S.pos_sample_time = 10.0 - lead / 1000.0, time.time()
+            self.assertGreater(S.get_beat_envelope(), 0.95)       # lands on the beat whatever the lead is
+
+    def test_a_tap_is_remembered_and_comes_back_with_the_song(self):
+        S = self.S
+        self._at(10.13)
+        S.set_manual_bpm(120, tap=True)
+        self.assertAlmostEqual(S.beat_offset, 0.13, places=2)
+        key = S.beat_key()
+        self.assertEqual(S.beat_memory[key]["bpm"], 120.0)
+        S.beat_offset, S.bpm_manual, S.current_bpm = 0.0, False, 100.0       # the song comes round again
+        self.assertTrue(S.recall_beat())
+        self.assertAlmostEqual(S.beat_offset, 0.13, places=2)
+        self.assertTrue(S.bpm_manual)
+        self.assertEqual(S.current_bpm, 120.0)
+
+    def test_a_nudge_moves_the_grid_and_keeps_the_automatic_tempo(self):
+        S = self.S
+        S.bpm_manual = False
+        S.beat_offset = 0.1
+        S.nudge_beat(+40)
+        self.assertAlmostEqual(S.beat_offset, 0.14, places=3)
+        S.nudge_beat(-200)                                            # wraps round inside one beat
+        self.assertTrue(0.0 <= S.beat_offset < 0.5)
+        self.assertIsNone(S.beat_memory[S.beat_key()]["bpm"])         # the tempo was not set by hand, so it is not pinned
+
+    def test_forgetting_a_song_resets_its_grid(self):
+        S = self.S
+        S.beat_offset = 0.2
+        S.remember_beat()
+        S.forget_beat()
+        self.assertNotIn(S.beat_key(), S.beat_memory)
+        self.assertEqual(S.beat_offset, 0.0)
+
+    def test_memory_is_capped_and_ads_are_not_remembered(self):
+        S = self.S
+        for i in range(320):
+            S.current_track = f"Song {i}"
+            S.remember_beat()
+        self.assertEqual(len(S.beat_memory), 300)
+        self.assertNotIn("the demo tapes|song 0", S.beat_memory)
+        S.is_ad = True
+        n = len(S.beat_memory)
+        S.remember_beat()
+        self.assertEqual(len(S.beat_memory), n)
+
+    def test_sharp_pulse_updates_every_zone(self):
+        S = self.S
+        S.set_pulse_sharp(True)
+        self.assertEqual(S.govee.SEG_BUDGET, 7)
+        S.set_pulse_sharp(False)
+        self.assertEqual(S.govee.SEG_BUDGET, 3)
+
+    def test_new_endpoints_exist(self):
+        src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server", "web.py")).read()
+        for p in ("/api/pulse_lead", "/api/pulse_sharp", "/api/beat_here", "/api/beat_nudge", "/api/beat_forget"):
+            self.assertIn(f'path == "{p}"', src)
+
+
+class LyricEnergyTest(unittest.TestCase):
+    def _song(self):
+        verse = ["a quiet street at dawn", "the kettle starts to sing", "i walk the long way round", "counting every ring"]
+        chorus = ["golden hour golden hour", "everything is glowing"]
+        lines, t = [], 20.0                       # 20 s of intro
+        for v in range(2):
+            for w in verse[v * 2:v * 2 + 2] + ["another line number %d" % v, "and one more %d" % v]:
+                lines.append([t, w]); t += 5
+            for w in chorus * 2:
+                lines.append([t, w]); t += 4
+        t += 25                                   # instrumental break
+        for w in chorus * 2:
+            lines.append([t, w]); t += 4
+        return lines, t
+
+    def test_chorus_is_stronger_than_verse_and_intro_is_quieter(self):
+        import tempo
+        lines, end = self._song()
+        prof = tempo.build_lyric_profile(lines, end + 30)
+        self.assertIsNotNone(prof)
+        intro, _ = tempo.lyric_energy(prof, 4)
+        verse, vs = tempo.lyric_energy(prof, 25)
+        chorus, cs = tempo.lyric_energy(prof, 44)
+        self.assertEqual(cs, "Chorus")
+        self.assertGreater(chorus, verse)
+        self.assertGreater(verse, intro)
+        self.assertTrue(all(0.6 <= x <= 1.0 for x in (intro, verse, chorus)))
+
+    def test_instrumental_and_outro_are_recognised(self):
+        import tempo
+        lines, end = self._song()
+        prof = tempo.build_lyric_profile(lines, end + 30)
+        names = {tempo.lyric_energy(prof, p)[1] for p in range(0, int(end + 30), 2)}
+        self.assertIn("Instrumental", names)
+        self.assertIn("Outro", names)
+
+    def test_too_few_lines_gives_no_profile(self):
+        import tempo
+        self.assertIsNone(tempo.build_lyric_profile([[1, "a line"], [5, "another"]], 200))
+        self.assertIsNone(tempo.build_lyric_profile(None, 200))
+        self.assertIsNone(tempo.build_lyric_profile([["x", None]] * 20, 200))     # junk is ignored, not a crash
+
+    def test_engine_uses_the_lyrics_and_falls_back_to_the_curve(self):
+        import tempo
+        S = engine.AppState()
+        S.dynamic_intensity_enabled, S.current_dur, S.is_ad = True, 200.0, False
+        S._profile_sig = S.last_track_sig                 # pretend the lookup already ran
+        S.current_pos, S.pos_sample_time, S.is_playing = 100.0, time.time(), False
+        curve = S._intensity_goal()
+        self.assertEqual(S.energy_source if hasattr(S, "energy_source") else "curve", "curve")
+        lines, end = self._song()
+        S.lyric_profile = tempo.build_lyric_profile(lines, 200.0)
+        S.current_pos = 44.0
+        with_lyrics = S._intensity_goal()
+        self.assertEqual(S.current_section, "Chorus")
+        self.assertNotEqual(round(with_lyrics, 3), round(tempo.calculate_dynamic_intensity(44.0, 200.0)[0], 3))
+        self.assertTrue(0.6 <= with_lyrics <= 1.0)
+        self.assertTrue(0.6 <= curve <= 1.0)
 
 
 class ColourTest(unittest.TestCase):
@@ -938,6 +1077,80 @@ class OtherDevicesTest(unittest.TestCase):
         self.assertEqual((again.name, again.side), ("Beam", "right"))
 
 
+class LampSyncTest(unittest.TestCase):
+    def _lamps(self):
+        import lamps
+        c = lamps.GoveeController(["10.0.0.1", "10.0.0.2"])
+        c.probe_pause = 0
+        return c
+
+    def test_link_check_counts_answers_but_never_changes_how_colours_are_sent(self):
+        import random
+        import lamps
+        c = self._lamps()
+        rng = random.Random(3)
+        def send(msg, ips=None):
+            if msg["msg"]["cmd"] != "devStatus" or c._probe is None:
+                return
+            for ip in ips:
+                if c._probe.get(ip) is not None and (ip == "10.0.0.1" or rng.random() < 0.4):    # lamp 2 answers 40% of the time
+                    c._probe[ip]["got"].append(time.time())
+        c.send_cmd = send
+        orig_sleep = lamps.time.sleep
+        lamps.time.sleep = lambda s: None
+        try:
+            for _ in range(8):
+                c.probe_links()
+        finally:
+            lamps.time.sleep = orig_sleep
+        info = c.link_info()
+        self.assertEqual(info["10.0.0.1"]["answered_pct"], 100)
+        self.assertLess(info["10.0.0.2"]["answered_pct"], 70)
+        # a lamp that answers few status requests still gets each colour frame once: more traffic would not help it
+        c2 = self._lamps()
+        sent = []
+        class Sock:
+            def sendto(self, payload, addr): sent.append(addr[0])
+        c2.sock = Sock()
+        c2._link_log["10.0.0.2"] = collections.deque([True] * 6 + [False] * 14, maxlen=40)
+        c2.send_cmd({"msg": {"cmd": "ptReal", "data": {"command": ["AAAA"]}}}, ips=["10.0.0.1", "10.0.0.2"])
+        self.assertEqual(sorted(sent), ["10.0.0.1", "10.0.0.2"])
+
+    def test_comparing_what_two_lamps_report(self):
+        import lamps
+        same = {"on": 1, "brightness": 100, "color": {"r": 200, "g": 60, "b": 60}}
+        self.assertEqual(lamps.GoveeController.compare_lamps(same, dict(same)), [])
+        dim = dict(same, brightness=5)
+        self.assertTrue(any("brightness differs" in p for p in lamps.GoveeController.compare_lamps(dim, same)))
+        other = dict(same, color={"r": 40, "g": 255, "b": 131})
+        self.assertTrue(any("colours differ" in p for p in lamps.GoveeController.compare_lamps(same, other)))
+        self.assertTrue(lamps.GoveeController.compare_lamps(None, same))              # a lamp that did not answer
+
+    def test_the_sync_check_reads_the_lamps_own_answers(self):
+        import lamps
+        c = self._lamps()
+        shown = {}
+        def send(msg, ips=None):
+            cmd = msg["msg"]["cmd"]
+            for ip in ips:
+                if cmd == "colorwc":
+                    col = msg["msg"]["data"]["color"]
+                    shown[ip] = dict(col) if ip == "10.0.0.1" else {"r": 0, "g": 0, "b": 255}      # lamp 2 shows blue: out of sync
+                elif cmd == "devStatus" and ip in shown:
+                    c.status[ip] = {"on": 1, "brightness": 100, "color": shown[ip], "kelvin": 0, "t": time.time()}
+                    if c._probe is not None and ip in c._probe:
+                        c._probe[ip]["got"].append(time.time())
+        c.send_cmd = send
+        orig = lamps.time.sleep
+        lamps.time.sleep = lambda s: None
+        try:
+            res = c.sync_check()
+        finally:
+            lamps.time.sleep = orig
+        self.assertFalse(res["ok"])
+        self.assertTrue(any("colours differ" in l for l in res["lines"]))
+
+
 class BrightnessHealTest(unittest.TestCase):
     def _lamps(self, want=100):
         import lamps
@@ -973,6 +1186,7 @@ class BrightnessHealTest(unittest.TestCase):
 
     def test_it_gives_up_instead_of_fighting_a_lamp(self):
         c, sent = self._lamps(100)
+        c.revive = lambda ip, now=None: False                    # the power cycle has its own test below
         now = time.time()
         for i in range(10):
             self._report(c, "10.0.0.1", 5, t=now + i)
@@ -981,6 +1195,24 @@ class BrightnessHealTest(unittest.TestCase):
         self._report(c, "10.0.0.1", 100, t=now + 20)
         c.heal_brightness(now=now + 20)
         self.assertEqual(c._heal_tries["10.0.0.1"], 0)           # and starts fresh once the lamp is right
+
+    def test_a_lamp_that_ignores_every_correction_is_switched_off_and_on_once(self):
+        import lamps
+        c, sent = self._lamps(100)
+        lamps.time.sleep, orig = (lambda s: None), lamps.time.sleep
+        try:
+            now = time.time()
+            for i in range(c.BRIGHTNESS_TRIES + 3):
+                self._report(c, "10.0.0.1", 5, t=now + i)
+                c.heal_brightness(now=now + i)
+            turns = [x for x in sent if x[0] == "turn"]
+            self.assertEqual([t[1] for t in turns], [0, 1])          # off, then on, and only for the stuck lamp
+            self.assertTrue(all(t[2] == ["10.0.0.1"] for t in turns))
+            # not again soon, even if it stays stuck
+            self.assertFalse(c.revive("10.0.0.1", now=now + 60))
+            self.assertTrue(c.revive("10.0.0.1", now=now + 8 + c.REVIVE_GAP + 1))
+        finally:
+            lamps.time.sleep = orig
 
 
 class ReleaseLampsTest(unittest.TestCase):
@@ -994,12 +1226,45 @@ class ReleaseLampsTest(unittest.TestCase):
 
     def test_release_hands_lamps_back_with_a_plain_colour_command(self):
         c, sent = self._controller(powered=True)
+        c.RELEASE_WAIT = 0
         c.release()
         self.assertTrue(sent)
         for m in sent:
+            if m["cmd"] == "devStatus":
+                continue                                                # the check that follows
             self.assertEqual(m["cmd"], "colorwc")                       # ends zone-by-zone control
             self.assertEqual(m["data"]["colorTemInKelvin"], 3500)       # an ordinary warm white
-            self.assertNotEqual(m["cmd"], "ptReal")
+        self.assertFalse([m for m in sent if m["cmd"] in ("ptReal", "turn")])     # a lamp that gives no answer is not power-cycled
+
+    def test_a_lamp_that_ignores_the_release_is_switched_off_and_on(self):
+        import lamps
+        c, sent = self._controller(powered=True)
+        c.RELEASE_WAIT = 0
+        orig = lamps.time.sleep
+        lamps.time.sleep = lambda s: None
+        def send(msg, ips=None):
+            sent.append(msg["msg"])
+            if msg["msg"]["cmd"] == "devStatus":                        # it answers, still showing the album colour
+                c.status["192.168.1.2"] = {"on": 1, "brightness": 100, "color": {"r": 200, "g": 40, "b": 40}, "kelvin": 0, "t": time.time() + 1}
+        c.send_cmd = send
+        try:
+            c.release()
+        finally:
+            lamps.time.sleep = orig
+        self.assertEqual([m["data"]["value"] for m in sent if m["cmd"] == "turn"], [0, 1])
+        self.assertEqual(sent[-1]["cmd"], "colorwc")                    # and the plain colour is sent again afterwards
+
+    def test_a_lamp_that_took_the_release_is_left_alone(self):
+        import lamps
+        c, sent = self._controller(powered=True)
+        c.RELEASE_WAIT = 0
+        def send(msg, ips=None):
+            sent.append(msg["msg"])
+            if msg["msg"]["cmd"] == "devStatus":
+                c.status["192.168.1.2"] = {"on": 1, "brightness": 100, "color": {"r": 255, "g": 255, "b": 255}, "kelvin": 3500, "t": time.time() + 1}
+        c.send_cmd = send
+        c.release()
+        self.assertFalse([m for m in sent if m["cmd"] == "turn"])
 
     def test_lamps_that_were_turned_off_stay_off(self):
         c, sent = self._controller(powered=False)

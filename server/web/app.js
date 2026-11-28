@@ -143,6 +143,25 @@ function anchorProgress() {
 }
 let lastArtSig = '';
 
+// Lamp sync check (Settings): both lamps are set to one colour and asked what they show
+function checkSync() { post('/api/sync_check', {}); }
+function linkSentence(s) {
+  const link = s.lamp_link || {}, parts = [];
+  [['Left', s.left_ip], ['Right', s.right_ip]].forEach(([name, ip]) => {
+    const l = link[ip]; if (!l) return;
+    parts.push(`${name} lamp answered ${l.answered_pct}% of status requests${l.rtt_ms != null ? ` (${l.rtt_ms} ms)` : ''}`);
+  });
+  return parts.join('; ');
+}
+function renderSync(s) {
+  const t = document.getElementById('syncText'), l = document.getElementById('linkText'), b = document.getElementById('btnSync');
+  if (!t) return;
+  const r = s.sync_result;
+  if (r) { t.textContent = r.lines.join(' '); t.style.color = r.running ? '' : (r.ok ? '#34d399' : '#fbbf24'); }
+  if (b) b.disabled = !!(r && r.running);
+  if (l) l.textContent = linkSentence(s);
+}
+
 // Update notice (Settings): says whether a newer release exists and links to it; never installs anything
 function updateStatusText(s) {
   if (s.update_available) return 'Version ' + s.update_version + ' is available (you have ' + s.version + ').';
@@ -165,6 +184,7 @@ function updateAction() {
 
 function updateUI(s) {
   renderUpdate(s);
+  renderSync(s);
   // Page accent comes from the album palette (not the moving lamp frame),
   // so the whole page isn't repainted 3x a second while colours flow.
   const pal = s.palette_lamp || [];
@@ -371,6 +391,12 @@ function updateUI(s) {
   if (setSliderFromServer('vibSlider', s.vibrancy)) document.getElementById('vibVal').textContent = `${parseFloat(s.vibrancy).toFixed(2)}×`;
   const depthPct = Math.round((s.pulse_depth || 0.6) * 100);
   if (setSliderFromServer('depthSlider', depthPct)) document.getElementById('depthVal').textContent = `${depthPct}%`;
+  const lead = s.pulse_lead_ms == null ? 80 : s.pulse_lead_ms;
+  if (setSliderFromServer('leadSlider', lead)) document.getElementById('leadVal').textContent = `${lead} ms`;
+  const sharpBtn = document.getElementById('btnSharp');
+  if (sharpBtn) { sharpBtn.textContent = s.pulse_sharp ? 'On' : 'Off'; document.getElementById('sharpVal').textContent = s.pulse_sharp ? 'On' : 'Off'; }
+  const savedEl = document.getElementById('beatSaved');
+  if (savedEl) savedEl.textContent = s.beat_remembered ? 'saved for this song' : '';
   const bpmRounded = Math.round(parseFloat(s.current_bpm || 120));
   if (setSliderFromServer('bpmSlider', bpmRounded)) document.getElementById('bpmVal').textContent = `${bpmRounded}`;
   const srcEl = document.getElementById('bpmSourceText');
@@ -638,6 +664,14 @@ function setPreviewMode(mode) {
   fetch('/api/preview_mode', { method: 'POST', body: JSON.stringify({ mode: mode }) });
 }
 
+
+function beatCmd(url, body) {
+  fetch(url, { method: 'POST', body: JSON.stringify(body || {}) });
+}
+
+function toggleSharp() {
+  fetch('/api/pulse_sharp', { method: 'POST', body: JSON.stringify({ on: !currentState.pulse_sharp }) });
+}
 
 function sendBpmAuto() {
   tapTimes = [];

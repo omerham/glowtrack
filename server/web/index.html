@@ -424,6 +424,22 @@
             <button onclick="sendBpmAuto()" id="btnBpmAuto" class="st-btn" title="Use the song's own tempo">Auto</button>
           </div>
           <p class="st-hint" id="bpmSourceText">Tempo source: —</p>
+          <div class="st-row">
+            <div class="st-label">Beat grid <span class="st-val" id="beatSaved"></span></div>
+            <button onclick="beatCmd('/api/beat_here')" class="st-btn" title="Press on a beat: lines the pulse up with it and remembers it for this song">Beat is now</button>
+            <button onclick="beatCmd('/api/beat_nudge', {ms: -20})" class="st-btn" title="Move the pulse 20 ms earlier">Earlier</button>
+            <button onclick="beatCmd('/api/beat_nudge', {ms: 20})" class="st-btn" title="Move the pulse 20 ms later">Later</button>
+            <button onclick="beatCmd('/api/beat_forget')" class="st-btn" title="Forget what was saved for this song">Forget</button>
+          </div>
+          <div class="st-row">
+            <div class="st-label">Pulse timing <span id="leadVal" class="st-val">80 ms</span></div>
+            <input type="range" id="leadSlider" min="-100" max="300" step="10" value="80" oninput="onSetting('leadVal', this.value + ' ms'); sendSetting('/api/pulse_lead', {ms: parseInt(this.value)})">
+          </div>
+          <div class="st-row">
+            <div class="st-label">Sharp pulse <span id="sharpVal" class="st-val">Off</span></div>
+            <button onclick="toggleSharp()" id="btnSharp" class="st-btn" title="Updates every zone on every frame during a pulse, so all zones hit together">Off</button>
+          </div>
+          <p class="st-hint">If the light hits a little before or after the beat, move Pulse timing, or press Beat is now on a beat. Each song remembers its own beat.</p>
         </section>
 
         <!-- Lamps -->
@@ -453,6 +469,11 @@
             <button onclick="sendRescan()" class="st-btn">Find lamps</button>
           </div>
           <p class="st-hint">Use Blink to see which lamp is which. During ads both lamps turn white.</p>
+          <div class="st-actions">
+            <button onclick="checkSync()" id="btnSync" class="st-btn">Check sync</button>
+          </div>
+          <p id="syncText" class="st-hint">Sets both lamps to one colour for a few seconds and asks each what it is showing, to find out whether they match.</p>
+          <p id="linkText" class="st-hint"></p>
           <p class="st-hint"><b>Lamps not showing?</b> In the Govee Home app turn on <b>LAN Control</b> for each lamp (lamp, Settings, LAN Control), keep the Mac and the lamps on the same Wi-Fi (not a guest network), then press Find lamps.</p>
         </section>
 

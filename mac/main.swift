@@ -83,10 +83,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         req.setValue("1", forHTTPHeaderField: "X-Govee-App")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = Data("{}".utf8)
-        req.timeoutInterval = 2
+        req.timeoutInterval = 4
         let done = DispatchSemaphore(value: 0)
         URLSession.shared.dataTask(with: req) { _, _, _ in done.signal() }.resume()
-        _ = done.wait(timeout: .now() + 2.5)
+        _ = done.wait(timeout: .now() + 4.5)
     }
 
     private func launchedAtLogin() -> Bool {

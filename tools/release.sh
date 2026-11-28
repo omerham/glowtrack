@@ -17,6 +17,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 die() { echo "Stopped: $*" >&2; exit 1; }
+tests_pass() {      # the tests print some log lines, so look for the result line anywhere, not at the very end
+  local out; out="$(/usr/bin/python3 -m unittest discover -s tests 2>&1)"
+  echo "$out" | grep -q "^OK$" && ! echo "$out" | grep -q "^FAILED"
+}
 [[ $# -ge 2 ]] || die "usage: tools/release.sh <version> <notes.md> [--dry-run] [--yes]"
 VERSION="$1"; NOTES="$2"; DRY=0; YES=0
 shift 2
@@ -43,7 +47,7 @@ echo "Release $VERSION  (code says $CURRENT, latest published ${LATEST:-none})"
 echo "Notes: $NOTES"
 
 echo "-> tests"
-/usr/bin/python3 -m unittest discover -s tests 2>&1 | tail -3 | grep -q "^OK" || die "the tests do not pass"
+tests_pass || die "the tests do not pass"
 
 if [[ "$DRY" == "1" ]]; then
   echo "Dry run: checks passed. Nothing was changed, built or published."
@@ -53,7 +57,7 @@ fi
 echo "-> bump the version"
 sed -i '' "s/^VERSION = \"[^\"]*\"/VERSION = \"$VERSION\"/" server/config.py
 sed -i '' "s|<key>CFBundleShortVersionString</key><string>[^<]*</string>|<key>CFBundleShortVersionString</key><string>$VERSION</string>|; s|<key>CFBundleVersion</key><string>[^<]*</string>|<key>CFBundleVersion</key><string>$VERSION</string>|" mac/Info.plist
-/usr/bin/python3 -m unittest discover -s tests 2>&1 | tail -3 | grep -q "^OK" || die "the tests fail after the version bump"
+tests_pass || die "the tests fail after the version bump"
 
 echo "-> build the downloads (Apple silicon and Intel in one app)"
 mac/build.sh --dist >/dev/null

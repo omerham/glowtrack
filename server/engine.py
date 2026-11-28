@@ -15,7 +15,9 @@ from lamps import GoveeController
 import players
 import spotify
 from spotify import spotify_connect_and_play
-from tempo import DEFAULT_BPM, UNKNOWN_SOURCES, calculate_dynamic_intensity, fetch_track_bpm
+from lyrics import get_lyrics
+from tempo import (DEFAULT_BPM, UNKNOWN_SOURCES, build_lyric_profile, calculate_dynamic_intensity,
+                   fetch_track_bpm, lyric_energy)
 
 
 _WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
@@ -124,6 +126,12 @@ class AppState:
         self.vibrancy = _f("vibrancy", 1.15, 0.7, 1.8)
         self.brightness = int(_f("brightness", 100, 1, 100))
         self.pulse_depth = _f("pulse_depth", 0.60, 0.1, 0.9)
+        self.pulse_lead_ms = int(_f("pulse_lead_ms", PULSE_LEAD * 1000, -300, 500))    # how early the pulse starts, to land on the beat
+        self.pulse_sharp = bool(cfg.get("pulse_sharp", False))                        # update every zone each frame during a pulse
+        if self.pulse_sharp:
+            self.govee.SEG_BUDGET = 7
+        mem = cfg.get("beat_memory")
+        self.beat_memory = mem if isinstance(mem, dict) else {}                        # song -> {"offset": s, "bpm": tempo or None}
         self.is_swapped_lr = bool(cfg.get("is_swapped_lr", False))
         self.is_inverted_tb = bool(cfg.get("is_inverted_tb", False))
         self.music_pulse_enabled = bool(cfg.get("music_pulse", False))
@@ -160,6 +168,8 @@ class AppState:
         # shifted by this offset (set by Tap Tempo) - so the pulse follows
         # the song position instead of a random start time.
         self.beat_offset = 0.0
+        self.lyric_profile = None       # the song's structure from its lyrics (None: use the fixed energy curve)
+        self._profile_sig = None
 
         # Playback
         self.current_pos = 0.0
@@ -195,6 +205,8 @@ class AppState:
         self.last_motion = 0.0
         self.intensity_target = 1.0
         self.engine_paused = False
+        self.sync_checking = False
+        self.sync_result = None
         self.lamp_test_step = None
         self.is_running = True
         self.last_broadcast = 0.0
@@ -266,6 +278,9 @@ class AppState:
             "vibrancy": self.vibrancy,
             "brightness": self.brightness,
             "pulse_depth": self.pulse_depth,
+            "pulse_lead_ms": self.pulse_lead_ms,
+            "pulse_sharp": self.pulse_sharp,
+            "beat_memory": self.beat_memory,
             "is_swapped_lr": self.is_swapped_lr,
             "is_inverted_tb": self.is_inverted_tb,
             "music_pulse": self.music_pulse_enabled,
@@ -523,6 +538,30 @@ class AppState:
         except Exception as e:
             print(f"[!] Could not release the lamps: {e}")
 
+    def check_lamp_sync(self):
+        """The dashboard's "Check sync": pauses the lighting for a few seconds, asks both lamps what they show, and
+        leaves the answer in the state for the dashboard to display."""
+        if self.sync_checking:
+            return
+        self.sync_checking = True
+        self.sync_result = {"running": True, "lines": ["Checking..."], "ok": None, "at": time.time()}
+        self.broadcast()
+        was_paused = self.engine_paused
+        try:
+            self.engine_paused = True
+            time.sleep(0.3)
+            res = self.govee.sync_check()
+            self.sync_result = {"running": False, "lines": res["lines"], "ok": res["ok"], "at": time.time()}
+        except Exception as e:
+            self.sync_result = {"running": False, "lines": [f"The check failed: {e}"], "ok": False, "at": time.time()}
+        finally:
+            self.engine_paused = was_paused
+            self.govee.forget_sent()
+            self.needs_send = True
+            self.sync_checking = False
+            self.wake.set()
+            self.broadcast()
+
     def connect_and_start(self):
         self.set_power(True)
         spotify_connect_and_play()
@@ -551,9 +590,33 @@ class AppState:
             return 1.0   # ads are plain white at full brightness
         if self.dynamic_intensity_enabled and self.current_dur > 0:
             inte, sec = calculate_dynamic_intensity(self.song_time(), self.current_dur)
+            self._ensure_lyric_profile()
+            if self.lyric_profile:
+                # the song's own structure leads; the fixed curve is a third of it, so a wrong read cannot go far
+                lv, sec = lyric_energy(self.lyric_profile, self.song_time())
+                inte = max(0.60, min(1.0, 0.67 * lv + 0.33 * inte))
             self.intensity_target, self.current_section = inte, sec
             return inte
         return self.intensity_target
+
+    def _ensure_lyric_profile(self):
+        """Looks the song's lyrics up once (in the background; they are cached) to read its structure."""
+        sig = self.last_track_sig
+        if self._profile_sig == sig:
+            return
+        self._profile_sig = sig
+        track, artist, dur = self.current_track, self.current_artist, self.current_dur
+
+        def work():
+            try:
+                res = get_lyrics(track, artist, dur)
+                prof = build_lyric_profile(res.get("synced"), dur) if res.get("status") == "synced" else None
+            except Exception:
+                prof = None
+            if self._profile_sig == sig:
+                self.lyric_profile = prof
+                self.broadcast()
+        threading.Thread(target=work, daemon=True).start()
 
     def _energy_moving(self):
         return (self.dynamic_intensity_enabled
@@ -574,10 +637,54 @@ class AppState:
             return base      # no real tempo (yet): a steady light beats a pulse at a made-up speed
         bpm = clamp(self.current_bpm, 40.0, 240.0)
         period = 60.0 / bpm
-        progress = ((self.song_time() + PULSE_LEAD - self.beat_offset) % period) / period
+        progress = ((self.song_time() + self.pulse_lead_ms / 1000.0 - self.beat_offset) % period) / period
         depth = clamp(self.pulse_depth, 0.1, 0.9)
         decay = (1.0 - progress) ** 2.2
         return base * ((1.0 - depth) + depth * decay)
+
+    def set_pulse_sharp(self, on):
+        """Sharp pulse: during a pulse every zone is updated each frame, instead of a few at a time."""
+        self.pulse_sharp = bool(on)
+        self.govee.SEG_BUDGET = 7 if self.pulse_sharp else type(self.govee).SEG_BUDGET
+        self.save_config()
+        self.broadcast()
+
+    def beat_key(self):
+        """Which song the beat grid belongs to: title and artist, lower case."""
+        t, a = (self.current_track or "").strip().lower(), (self.current_artist or "").strip().lower()
+        return f"{a}|{t}" if t and a and not self.is_ad else ""
+
+    def remember_beat(self):
+        """Keeps this song's beat grid (and its tempo, when it was set by hand), so the next time it plays it is right at once."""
+        key = self.beat_key()
+        if not key:
+            return
+        self.beat_memory.pop(key, None)
+        self.beat_memory[key] = {"offset": round(self.beat_offset, 3), "bpm": round(self.current_bpm, 1) if self.bpm_manual else None}
+        while len(self.beat_memory) > 300:                 # the oldest songs go first
+            self.beat_memory.pop(next(iter(self.beat_memory)))
+        self.save_config()
+
+    def forget_beat(self):
+        self.beat_memory.pop(self.beat_key(), None)
+        self.beat_offset = 0.0
+        self.save_config()
+        self.wake.set()
+        self.broadcast()
+
+    def recall_beat(self):
+        """A song that was lined up before gets its grid (and tempo) back."""
+        m = self.beat_memory.get(self.beat_key())
+        if not m:
+            return False
+        try:
+            self.beat_offset = float(m.get("offset", 0.0))
+            if m.get("bpm"):
+                self.current_bpm = clamp(float(m["bpm"]), 40.0, 240.0)
+                self.bpm_manual, self.bpm_known, self.bpm_source = True, True, "Remembered"
+        except (TypeError, ValueError):
+            return False
+        return True
 
     def set_manual_bpm(self, bpm, tap=False):
         self.current_bpm = clamp(float(bpm), 40.0, 240.0)
@@ -587,6 +694,22 @@ class AppState:
         if tap:
             # The last tap was on a beat - line the grid up with it
             self.beat_offset = self.song_time() % (60.0 / self.current_bpm)
+            self.remember_beat()
+        self.wake.set()
+        self.broadcast()
+
+    def beat_here(self):
+        """"This is a beat": lines the grid up with now, keeping the tempo."""
+        self.beat_offset = self.song_time() % (60.0 / clamp(self.current_bpm, 40.0, 240.0))
+        self.remember_beat()
+        self.wake.set()
+        self.broadcast()
+
+    def nudge_beat(self, ms):
+        """Moves the whole grid earlier (negative) or later (positive) by a few milliseconds."""
+        period = 60.0 / clamp(self.current_bpm, 40.0, 240.0)
+        self.beat_offset = (self.beat_offset + clamp(float(ms), -500.0, 500.0) / 1000.0) % period
+        self.remember_beat()
         self.wake.set()
         self.broadcast()
 
@@ -824,12 +947,18 @@ class AppState:
             "bpm_manual": self.bpm_manual,
             "bpm_known": self.bpm_known,
             "pulse_depth": self.pulse_depth,
+            "pulse_lead_ms": self.pulse_lead_ms,
+            "pulse_sharp": self.pulse_sharp,
+            "beat_remembered": self.beat_key() in self.beat_memory,
+            "energy_source": "lyrics" if self.lyric_profile else "curve",
             "brightness": self.brightness,
             "is_powered_on": self.is_powered_on,
             "lamp_ips": g.ips,
             "available_ips": g.all_ips,
             "left_ip": g.left_ip,
             "right_ip": g.right_ip,
+            "lamp_link": self.govee.link_info(),
+            "sync_result": self.sync_result,
             "lamp_status": {ip: {k: v for k, v in s.items() if k != "t"} for ip, s in self.govee.status.items()},
             "lamp_online": {ip: g.is_online(ip) for ip in g.all_ips},
             "identifying_ip": self.identifying_ip,
@@ -956,6 +1085,8 @@ class AppState:
             self.bpm_known = False          # the last song's tempo means nothing for this one
             self.detected_bpm_known = False
             self.beat_offset = 0.0
+            self.lyric_profile, self._profile_sig = None, None
+            self.recall_beat()
 
             def _fetch_bpm(t=track, a=artist, s=meta_sig):
                 bpm, source = fetch_track_bpm(t, a)
